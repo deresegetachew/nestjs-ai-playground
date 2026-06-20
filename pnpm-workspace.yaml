@@ -1,0 +1,6 @@
+ignoredBuiltDependencies:
+  - '@google/genai'
+  - protobufjs
+
+onlyBuiltDependencies:
+  - unrs-resolver
