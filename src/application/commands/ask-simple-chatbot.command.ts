@@ -1,3 +1,15 @@
+import { AgentMessage } from '../ports/agent-types';
+
 export class AskSimpleChatbotCommand {
-  constructor(public readonly message: string) {}
+  public readonly message: string;
+  public readonly history: AgentMessage[];
+
+  constructor(
+    message: string,
+    history: AgentMessage[] = [],
+  ) {
+    this.message = message;
+    this.history = history;
+  }
 }
+

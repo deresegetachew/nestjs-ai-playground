@@ -67,47 +67,153 @@ describe('GeminiStrategy', () => {
     });
   });
 
-  describe('message', () => {
-    it('should return text response on successful API call', async () => {
-      mockGenerateContent.mockResolvedValue({ text: 'Hello response' });
-      const res = await service.message('Hello');
-      expect(res).toBe('Hello response');
-      expect(mockGenerateContent).toHaveBeenCalledWith({
+  describe('createMessage', () => {
+    it('should return AgentTurn on successful API call', async () => {
+      const mockResponseStream = {
+        response: Promise.resolve({
+          candidates: [
+            {
+              content: {
+                role: 'model',
+                parts: [{ text: 'Hello response' }],
+              },
+            },
+          ],
+        }),
+        [Symbol.asyncIterator]: async function* () {
+          await Promise.resolve();
+          yield { text: 'Hello response' };
+        },
+      };
+      mockGenerateContentStream.mockResolvedValue(mockResponseStream);
+
+      const { chunks$, turn$ } = service.createMessage({
+        maxTokens: 1024,
+        tools: [],
+        messages: [{ role: 'user', content: 'Hello' }],
+      });
+
+      const chunks: string[] = [];
+      const sub = chunks$.subscribe((c) => chunks.push(c));
+      const turn = await turn$;
+      sub.unsubscribe();
+
+      expect(turn.reply).toBe('Hello response');
+      expect(chunks).toEqual(['Hello response']);
+      expect(mockGenerateContentStream).toHaveBeenCalledWith({
         model: 'gemini-2.0-flash',
-        contents: 'Hello',
+        contents: [{ role: 'user', parts: [{ text: 'Hello' }] }],
+        config: {
+          systemInstruction: undefined,
+          maxOutputTokens: 1024,
+          tools: undefined,
+        },
+      });
+    });
+
+    it('should extract system instruction and filter it out of contents', async () => {
+      const mockResponseStream = {
+        response: Promise.resolve({
+          candidates: [
+            {
+              content: {
+                role: 'model',
+                parts: [{ text: 'Hello response' }],
+              },
+            },
+          ],
+        }),
+        [Symbol.asyncIterator]: async function* () {
+          await Promise.resolve();
+          yield { text: 'Hello response' };
+        },
+      };
+      mockGenerateContentStream.mockResolvedValue(mockResponseStream);
+
+      const { chunks$, turn$ } = service.createMessage({
+        maxTokens: 1024,
+        system: 'You are a helper.',
+        tools: [],
+        messages: [{ role: 'user', content: 'Hello' }],
+      });
+
+      const chunks: string[] = [];
+      const sub = chunks$.subscribe((c) => chunks.push(c));
+      const turn = await turn$;
+      sub.unsubscribe();
+
+      expect(turn.reply).toBe('Hello response');
+      expect(chunks).toEqual(['Hello response']);
+      expect(mockGenerateContentStream).toHaveBeenCalledWith({
+        model: 'gemini-2.0-flash',
+        contents: [{ role: 'user', parts: [{ text: 'Hello' }] }],
+        config: {
+          systemInstruction: 'You are a helper.',
+          maxOutputTokens: 1024,
+          tools: undefined,
+        },
       });
     });
 
     it('should throw AuthenticationException when API key is bad (401)', async () => {
       const error = { status: 401, message: 'API key not valid' };
-      mockGenerateContent.mockRejectedValue(error);
-      await expect(service.message('Hello')).rejects.toThrow(
-        AuthenticationException,
-      );
-    });
-  });
+      mockGenerateContentStream.mockRejectedValue(error);
 
-  describe('createMessage', () => {
-    it('should call mapGeminiResponseToDomain and return AgentTurn', async () => {
-      mockGenerateContent.mockResolvedValue({
-        candidates: [
-          {
-            content: {
-              role: 'model',
-              parts: [{ text: 'response text' }],
-            },
-          },
-        ],
+      const { chunks$, turn$ } = service.createMessage({
+        maxTokens: 1024,
+        tools: [],
+        messages: [{ role: 'user', content: 'Hello' }],
       });
 
-      const turn = await service.createMessage({
+      const chunks: string[] = [];
+      const sub = chunks$.subscribe({
+        next: (c) => chunks.push(c),
+        error: () => {},
+      });
+
+      await expect(turn$).rejects.toThrow(AuthenticationException);
+      sub.unsubscribe();
+    });
+
+    it('should return observable and stream text chunks', async () => {
+      const mockResponseStream = {
+        response: Promise.resolve({
+          candidates: [
+            {
+              content: {
+                role: 'model',
+                parts: [{ text: 'streamed response' }],
+              },
+            },
+          ],
+        }),
+        [Symbol.asyncIterator]: async function* () {
+          await Promise.resolve();
+          yield { text: 'streamed ' };
+          yield { text: 'response' };
+        },
+      };
+
+      mockGenerateContentStream.mockResolvedValue(mockResponseStream);
+
+      const { chunks$, turn$ } = service.createMessage({
         maxTokens: 100,
         tools: [],
         messages: [{ role: 'user', content: 'hello' }],
       });
 
-      expect(turn.stopReason).toBe('end_turn');
-      expect(turn.content).toEqual([{ type: 'text', text: 'response text' }]);
+      const chunks: string[] = [];
+      await new Promise<void>((resolve, reject) => {
+        chunks$.subscribe({
+          next: (val) => chunks.push(val),
+          error: reject,
+          complete: resolve,
+        });
+      });
+
+      const turn = await turn$;
+      expect(chunks).toEqual(['streamed ', 'response']);
+      expect(turn.reply).toBe('streamed response');
     });
   });
 });

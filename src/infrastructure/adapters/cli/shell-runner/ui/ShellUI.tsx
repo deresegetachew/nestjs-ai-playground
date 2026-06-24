@@ -7,6 +7,7 @@ import { WelcomeBanner } from './components/WelcomeBanner';
 import { LogItem, LogEntry, getFriendlyErrorMessage } from './components/LogItem';
 import { ThinkingSpinner } from './components/ThinkingSpinner';
 import { PromptInput } from './components/PromptInput';
+import { AgentStreamChunk } from '../../../../../application/ports/agent-types';
 
 export interface ShellUIProps {
   ink: typeof InkModule;
@@ -27,7 +28,30 @@ export interface ShellUIProps {
   onGetAgentStream: (
     agentName: string,
     message: string,
-  ) => Promise<Observable<string>>;
+  ) => Promise<Observable<AgentStreamChunk>>;
+  /** Called when the user exits an agent session — lets the infrastructure
+   *  layer clear any stateful session data (e.g., conversation history). */
+  onExitAgentSession?: (agentName: string) => void;
+}
+
+// ==========================================
+// HELPERS
+// ==========================================
+
+/**
+ * Extracts the clean final answer from the LLM's raw streamed text.
+ * ReAct models often emit: "Thought: ...\nFinal Answer: <answer>"
+ * We strip the Thought preamble and the "Final Answer:" label so only
+ * the plain answer text is rendered outside the thinking box.
+ */
+function extractFinalAnswer(raw: string): string {
+  // Try to find a "Final Answer:" marker (case-insensitive)
+  const match = raw.match(/final answer\s*:\s*/i);
+  if (match && match.index !== undefined) {
+    return raw.slice(match.index + match[0].length).trim();
+  }
+  // No marker found — return the full text as-is
+  return raw.trim();
 }
 
 // ==========================================
@@ -41,13 +65,29 @@ export const ShellUI: React.FC<ShellUIProps> = ({
   agentRegistry,
   shellRouter,
   onGetAgentStream,
+  onExitAgentSession,
 }) => {
-  const { Box, Text, useApp } = ink;
+  const { Box, Text, useApp, useInput } = ink;
   const { exit } = useApp();
   const [mode, setMode] = useState<
     'PARENT_SHELL' | 'AGENT_SELECT' | 'AGENT_SESSION'
   >('PARENT_SHELL');
   const [activeAgent, setActiveAgent] = useState<RegistryCommand | null>(null);
+
+  useInput((input, key) => {
+    if (key.ctrl && input === 't') {
+      setLogs((prev) => {
+        const updated = [...prev];
+        for (let i = updated.length - 1; i >= 0; i--) {
+          if (updated[i].type === 'bot') {
+            updated[i].isCollapsed = !updated[i].isCollapsed;
+            break;
+          }
+        }
+        return updated;
+      });
+    }
+  });
   const [input, setInput] = useState('');
   const [isThinking, setIsThinking] = useState(false);
   const [isWaiting, setIsWaiting] = useState(false);
@@ -92,6 +132,7 @@ export const ShellUI: React.FC<ShellUIProps> = ({
 
       case 'EXIT':
         if (mode === 'AGENT_SESSION') {
+          onExitAgentSession?.(activeAgent?.name() ?? '');
           setActiveAgent(null);
           setMode('PARENT_SHELL');
         } else {
@@ -141,7 +182,51 @@ export const ShellUI: React.FC<ShellUIProps> = ({
                   const updated = [...prev];
                   const targetLog = updated[currentLogsLength];
                   if (targetLog) {
-                    targetLog.text += chunk;
+                    if (!targetLog.steps) {
+                      targetLog.steps = [];
+                    }
+                    switch (chunk.type) {
+                      case 'text':
+                        targetLog.text += chunk.text;
+                        break;
+                      case 'turn_completed':
+                        if (chunk.isEnd) {
+                          targetLog.finalAnswer = extractFinalAnswer(targetLog.text);
+                          targetLog.text = '';
+                          targetLog.isCollapsed = true;
+                        } else {
+                          if (targetLog.text.trim()) {
+                            targetLog.steps.push({
+                              type: 'thought',
+                              text: targetLog.text,
+                            });
+                          }
+                          targetLog.text = '';
+                        }
+                        break;
+                      case 'tool_use':
+                        targetLog.steps.push({
+                          type: 'calling_tool',
+                          text: `${chunk.name} with ${JSON.stringify(chunk.input)}`,
+                        });
+                        break;
+                      case 'observation':
+                        targetLog.steps.push({
+                          type: 'observation',
+                          text: chunk.content,
+                        });
+                        break;
+                      case 'warning':
+                        targetLog.steps.push({
+                          type: 'warning',
+                          text: chunk.text,
+                        });
+                        break;
+                      case 'error':
+                        targetLog.text = chunk.text;
+                        targetLog.type = 'error';
+                        break;
+                    }
                   }
                   return updated;
                 });
@@ -178,14 +263,33 @@ export const ShellUI: React.FC<ShellUIProps> = ({
         const targetAgent = agentRegistry.findAgent(commandName);
 
         if (!targetAgent) {
+          const availableAgents = agentRegistry
+            .getAgents()
+            .map((a) => `  • ${a.name().replace(/_/g, '-')}${a.description() ? ` — ${a.description()}` : ''}`)
+            .join('\n');
           setLogs((prev) => [
             ...prev,
-            { type: 'error', text: `unknown command "${commandName}"` },
+            {
+              type: 'system',
+              text: `Unknown command "${commandName}". Available agents:\n${availableAgents}`,
+            },
           ]);
           break;
         }
 
-        const message = (action.args || []).join(' ');
+        const message = (action.args || []).join(' ').trim();
+
+        if (!message) {
+          setLogs((prev) => [
+            ...prev,
+            {
+              type: 'system',
+              text: `Usage: :run ${commandName} <your message here>`,
+            },
+          ]);
+          break;
+        }
+
         const agentDisplayName = targetAgent.name().replace(/_/g, '-');
 
         setLogs((prev) => [
@@ -203,6 +307,7 @@ export const ShellUI: React.FC<ShellUIProps> = ({
 
         try {
           const stream$ = await onGetAgentStream(targetAgent.name(), message);
+          // EXECUTE_AGENT_COMMAND is a one-shot command — history is managed by the runner.
           setIsThinking(false);
 
           await new Promise<void>((resolve, reject) => {
@@ -212,7 +317,51 @@ export const ShellUI: React.FC<ShellUIProps> = ({
                   const updated = [...prev];
                   const targetLog = updated[currentLogsLength];
                   if (targetLog) {
-                    targetLog.text += chunk;
+                    if (!targetLog.steps) {
+                      targetLog.steps = [];
+                    }
+                    switch (chunk.type) {
+                      case 'text':
+                        targetLog.text += chunk.text;
+                        break;
+                      case 'turn_completed':
+                        if (chunk.isEnd) {
+                          targetLog.finalAnswer = extractFinalAnswer(targetLog.text);
+                          targetLog.text = '';
+                          targetLog.isCollapsed = true;
+                        } else {
+                          if (targetLog.text.trim()) {
+                            targetLog.steps.push({
+                              type: 'thought',
+                              text: targetLog.text,
+                            });
+                          }
+                          targetLog.text = '';
+                        }
+                        break;
+                      case 'tool_use':
+                        targetLog.steps.push({
+                          type: 'calling_tool',
+                          text: `${chunk.name} with ${JSON.stringify(chunk.input)}`,
+                        });
+                        break;
+                      case 'observation':
+                        targetLog.steps.push({
+                          type: 'observation',
+                          text: chunk.content,
+                        });
+                        break;
+                      case 'warning':
+                        targetLog.steps.push({
+                          type: 'warning',
+                          text: chunk.text,
+                        });
+                        break;
+                      case 'error':
+                        targetLog.text = chunk.text;
+                        targetLog.type = 'error';
+                        break;
+                    }
                   }
                   return updated;
                 });
@@ -304,7 +453,9 @@ export const ShellUI: React.FC<ShellUIProps> = ({
               ? 'Agent is thinking...'
               : isWaiting
                 ? 'Agent is typing...'
-                : 'Type a message...'
+                : mode === 'PARENT_SHELL'
+                  ? 'Select an agent to start (type :agents or :run <name>)...'
+                  : 'Type a message...'
           }
         />
       )}

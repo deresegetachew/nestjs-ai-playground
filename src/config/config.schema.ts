@@ -20,6 +20,7 @@ export const configSchema = z.object({
       apiKey: z.string().min(1),
     })
     .optional(),
+  weatherAPIKey: z.string().optional(),
   ai: z
     .object({
       vendor: z.enum(['gemini', 'openai']).default('gemini'),

@@ -28,11 +28,14 @@
     "@nestjs/platform-express": "^11.0.1",
     "axios": "^1.18.0",
     "boxen": "^8.0.1",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.15.1",
     "ink": "^7.1.0",
     "ink-select-input": "^6.2.0",
     "ink-spinner": "^5.0.0",
     "ink-text-input": "^6.0.0",
     "lodash": "^4.18.1",
+    "mathjs": "^15.2.0",
     "nest-commander": "^3.20.1",
     "openai": "^6.44.0",
     "ora": "^9.4.0",
@@ -103,5 +106,5 @@
       "<rootDir>/infrastructure/adapters/cli/shell-runner/ui/react-mock-setup.ts"
     ]
   },
-  "packageManager": "pnpm@10.17.1+sha256.a1e0133f6801c13039ae41309e5e5a7d1058a3a1e1edd020a4944a83c5368d04"
+  "packageManager": "pnpm@11.8.0+sha512.c1f5e7c4cb241c8f174b743851d82f42b802324afc8b0f116b96adb15aa06664948dde36960a3ba1079ba5b4b29dd0140135b94b5b5f5263592249d68e555f26"
 }

@@ -15,6 +15,7 @@ export const getDummyConfig = () => ({
   openai: {
     apiKey: 'dummy',
   },
+  weatherAPIKey: 'dummy',
   ai: {
     vendor: 'gemini' as const,
     model: 'gemini-2.0-flash',

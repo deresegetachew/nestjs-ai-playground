@@ -1,6 +1,14 @@
+allowBuilds:
+  '@google/genai': true
+  protobufjs: true
+  unrs-resolver: true
+
 ignoredBuiltDependencies:
   - '@google/genai'
   - protobufjs
+
+minimumReleaseAgeExclude:
+  - '@google/genai@2.9.0'
 
 onlyBuiltDependencies:
   - unrs-resolver

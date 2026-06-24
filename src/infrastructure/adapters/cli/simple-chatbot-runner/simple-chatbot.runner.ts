@@ -2,6 +2,7 @@ import { Command, CommandRunner } from 'nest-commander';
 import { CommandBus } from '@nestjs/cqrs';
 import { Observable } from 'rxjs';
 import { AskSimpleChatbotCommand } from '../../../../application/commands/ask-simple-chatbot.command';
+import { AgentStreamChunk } from '../../../../application/ports/agent-types';
 
 import pc from 'picocolors';
 import ora from 'ora';
@@ -69,30 +70,70 @@ export class SimpleChatbotRunner extends CommandRunner {
     try {
       const responseStream$ = await this.commandBus.execute<
         AskSimpleChatbotCommand,
-        Observable<string>
+        Observable<AgentStreamChunk>
       >(new AskSimpleChatbotCommand(message));
 
-      let hasReceivedFirstChunk = false;
+      let currentTurnText = '';
 
       await new Promise<void>((resolve, reject) => {
         responseStream$.subscribe({
           next: (chunk) => {
-            if (!hasReceivedFirstChunk) {
-              hasReceivedFirstChunk = true;
-              spinner.stop();
-              process.stdout.write(agentPromptPrefix);
+            switch (chunk.type) {
+              case 'text':
+                currentTurnText += chunk.text;
+                break;
+              case 'turn_completed':
+                spinner.stop();
+                if (chunk.isEnd) {
+                  if (currentTurnText.trim()) {
+                    process.stdout.write(
+                      `${agentPromptPrefix}${pc.green(pc.bold('[Final Answer]:'))} ${currentTurnText}\n`,
+                    );
+                  }
+                } else {
+                  if (currentTurnText.trim()) {
+                    process.stdout.write(
+                      `${agentPromptPrefix}${pc.cyan(pc.bold('[Thought]:'))} ${currentTurnText}\n`,
+                    );
+                  }
+                  currentTurnText = '';
+                  spinner.start(
+                    `🤖 ${pc.green(pc.bold('simple-chatbot'))} ${pc.dim('›')} thinking ...`,
+                  );
+                }
+                break;
+              case 'tool_use':
+                spinner.stop();
+                process.stdout.write(
+                  `${agentPromptPrefix}${pc.yellow(pc.bold('[Calling Tool]:'))} ${chunk.name} with ${JSON.stringify(chunk.input)}\n`,
+                );
+                break;
+              case 'observation':
+                spinner.stop();
+                process.stdout.write(
+                  `${agentPromptPrefix}${pc.gray(pc.bold('[Observation]:'))} ${chunk.content}\n`,
+                );
+                break;
+              case 'warning':
+                spinner.stop();
+                process.stdout.write(
+                  `${agentPromptPrefix}${pc.red(pc.bold('[Warning]:'))} ${chunk.text}\n`,
+                );
+                break;
+              case 'error':
+                spinner.stop();
+                process.stdout.write(
+                  `${agentPromptPrefix}${pc.red(pc.bold('[Error]:'))} ${chunk.text}\n`,
+                );
+                break;
             }
-            process.stdout.write(chunk);
           },
           error: (err: unknown) => {
+            spinner.stop();
             reject(err instanceof Error ? err : new Error(String(err)));
           },
           complete: () => {
-            if (!hasReceivedFirstChunk) {
-              spinner.stop();
-            } else {
-              process.stdout.write('\n\n');
-            }
+            spinner.stop();
             resolve();
           },
         });

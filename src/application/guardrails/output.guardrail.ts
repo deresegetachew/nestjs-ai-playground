@@ -1,26 +1,25 @@
 import { z } from 'zod';
 
-export const AgentOutputSchema = z.object({
-  action: z.enum(['search', 'summarise', 'done']),
-  query: z.string().optional(),
-  result: z.string().optional(),
-});
+export const AgentOutputSchema = z
+  .string()
+  .min(1, 'Model returned an empty response.')
+  .max(10000, 'Model response exceeded length limit.');
+
+const PII_PATTERNS = [
+  /\b\d{3}-\d{2}-\d{4}\b/, // SSN
+  /(?<!\.)\b(?:\d[ -]*?){13,16}\b(?!\.\d)/, // Basic Credit Card (ignoring floating point decimals)
+];
 
 /**
- * Validates the model's string output against a Zod schema.
- * Throws an Error if the output is not valid JSON, or a ZodError if the schema is violated.
+ * Validates the model's free-text output.
+ * Checks for response length, empty responses, and basic PII.
  */
-export function validateOutputSchema<T>(
-  output: string,
-  schema: z.Schema<T>,
-): T {
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(output);
-  } catch {
-    throw new Error(
-      'Model returned non-JSON output. Prompt may need adjustment.',
-    );
+export function validateOutputText(text: string): string {
+  const validated = AgentOutputSchema.parse(text);
+
+  if (PII_PATTERNS.some((p) => p.test(validated))) {
+    throw new Error('Output rejected: potential PII detected.');
   }
-  return schema.parse(parsed);
+
+  return validated;
 }

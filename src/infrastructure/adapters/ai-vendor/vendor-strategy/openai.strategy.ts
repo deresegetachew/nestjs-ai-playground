@@ -6,8 +6,10 @@ import { AppConfig } from '../../../../config/config.schema';
 import { AIModel } from '../../../../domain/models/ai-model.value-object';
 import { AIVendor } from '../../../../domain/models/ai-vendor.value-object';
 import { AIClient } from '../../../../application/ports/ai-client.port';
-import { AgentTurn } from '../../../../application/ports/agent-types';
-import { safeInvoke } from '../utils/api-retry';
+import {
+  AgentTurn,
+  IAgentParams,
+} from '../../../../application/ports/agent-types';
 
 const OPENAI_MODELS = [
   {
@@ -61,7 +63,7 @@ export class OpenAiStrategy implements AIClient {
     });
   }
 
-  getClient(): OpenAI {
+  private getClient(): OpenAI {
     if (!this.client) {
       throw new Error(
         'OpenAI Strategy not initialized. Check API key configuration.',
@@ -82,52 +84,23 @@ export class OpenAiStrategy implements AIClient {
     );
   }
 
-  async message(prompt: string): Promise<string> {
-    const client = this.getClient();
-    const response = await safeInvoke(
-      () =>
-        client.chat.completions.create({
-          model: this.defaultModel,
-          messages: [{ role: 'user', content: prompt }],
-        }),
-      this.logger,
-    );
-    return response.choices[0]?.message?.content || '';
-  }
-
-  streamMessage(prompt: string): Observable<string> {
-    return new Observable<string>((subscriber) => {
-      let active = true;
-      const client = this.getClient();
-      void (async () => {
-        try {
-          const stream = await client.chat.completions.create({
-            model: this.defaultModel,
-            messages: [{ role: 'user', content: prompt }],
-            stream: true,
-          });
-
-          for await (const chunk of stream) {
-            if (!active) break;
-            subscriber.next(chunk.choices[0]?.delta?.content || '');
-          }
-          subscriber.complete();
-        } catch (error) {
-          if (active) {
-            subscriber.error(error);
-          }
-        }
-      })();
-
-      return () => {
-        active = false;
-      };
+  createMessage(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    params: IAgentParams,
+  ): {
+    chunks$: Observable<string>;
+    turn$: Promise<AgentTurn>;
+  } {
+    const chunks$ = new Observable<string>((subscriber) => {
+      subscriber.error(
+        new Error(
+          'OpenAI Agent support (createMessage) is not yet implemented.',
+        ),
+      );
     });
-  }
-
-  createMessage(): Promise<AgentTurn> {
-    return Promise.reject(
+    const turn$ = Promise.reject(
       new Error('OpenAI Agent support (createMessage) is not yet implemented.'),
     );
+    return { chunks$, turn$ };
   }
 }

@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { GoogleGenAI } from '@google/genai';
-import { Observable } from 'rxjs';
+import { GoogleGenAI, Part } from '@google/genai';
+import { Observable, Subject } from 'rxjs';
 import { AppConfig } from '../../../../config/config.schema';
 import { AIModel } from '../../../../domain/models/ai-model.value-object';
 import { AIVendor } from '../../../../domain/models/ai-vendor.value-object';
@@ -14,7 +14,7 @@ import { safeInvoke } from '../utils/api-retry';
 import {
   mapDomainMessagesToGemini,
   mapDomainToolsToGemini,
-  mapGeminiResponseToDomain,
+  mapGeminiPartsToTurn,
 } from '../mappers/gemini-agent.mapper';
 
 const GEMINI_MODELS = [
@@ -118,7 +118,7 @@ export class GeminiStrategy implements AIClient {
     });
   }
 
-  getClient(): GoogleGenAI {
+  private getClient(): GoogleGenAI {
     if (!this.client) {
       throw new Error(
         'Gemini Strategy not initialized. Check API key configuration.',
@@ -140,69 +140,74 @@ export class GeminiStrategy implements AIClient {
     );
   }
 
-  async message(prompt: string): Promise<string> {
+  createMessage(params: IAgentParams): {
+    chunks$: Observable<string>;
+    turn$: Promise<AgentTurn>;
+  } {
     const client = this.getClient();
-    const response = await safeInvoke(
-      () =>
-        client.models.generateContent({
-          model: this.defaultModel,
-          contents: prompt,
-        }),
-      this.logger,
-    );
-    return response.text || '';
-  }
-
-  streamMessage(prompt: string): Observable<string> {
-    return new Observable<string>((subscriber) => {
-      let active = true;
-      const client = this.getClient();
-      void (async () => {
-        try {
-          const responseStream = await client.models.generateContentStream({
-            model: this.defaultModel,
-            contents: prompt,
-          });
-
-          for await (const chunk of responseStream) {
-            if (!active) break;
-            subscriber.next(chunk.text || '');
-          }
-          subscriber.complete();
-        } catch (error) {
-          if (active) {
-            subscriber.error(error);
-          }
-        }
-      })();
-
-      return () => {
-        active = false;
-      };
-    });
-  }
-
-  async createMessage(params: IAgentParams): Promise<AgentTurn> {
-    const client = this.getClient();
-
+    const systemInstruction = params.system;
     const contents = mapDomainMessagesToGemini(params.messages);
     const tools = mapDomainToolsToGemini(params.tools);
 
-    const response = await safeInvoke(
-      () =>
-        client.models.generateContent({
-          model: this.defaultModel,
-          contents,
-          config: {
-            systemInstruction: params.system,
-            maxOutputTokens: params.maxTokens,
-            tools:
-              tools.length > 0 ? [{ functionDeclarations: tools }] : undefined,
-          },
-        }),
-      this.logger,
-    );
+    const subject = new Subject<string>();
 
-    return mapGeminiResponseToDomain(response);
+    const turn$ = (async () => {
+      try {
+        const responseStream = await safeInvoke(
+          () =>
+            client.models.generateContentStream({
+              model: this.defaultModel,
+              contents,
+              config: {
+                systemInstruction,
+                maxOutputTokens: params.maxTokens,
+                tools:
+                  tools.length > 0
+                    ? [{ functionDeclarations: tools }]
+                    : undefined,
+              },
+            }),
+          this.logger,
+        );
+
+        let aggregatedText = '';
+        const toolCallParts: Part[] = [];
+
+        for await (const chunk of responseStream) {
+          const text = chunk.text;
+          if (text) {
+            subject.next(text);
+            aggregatedText += text;
+          }
+          const parts = chunk.candidates?.[0]?.content?.parts;
+          if (parts) {
+            for (const part of parts) {
+              if (part.functionCall) {
+                toolCallParts.push(part);
+              }
+            }
+          }
+        }
+
+        // NOTE: The ordering here is crucial. We must call subject.complete() (completing chunks$)
+        // BEFORE returning the AgentTurn (resolving turn$). This guarantees that any stream
+        // subscription hooks in the executor finish executing and cleaning up before the
+        // main execution loop is allowed to resume with the parsed AgentTurn promise.
+        subject.complete();
+
+        const finalParts: Part[] = [];
+        if (aggregatedText) {
+          finalParts.push({ text: aggregatedText });
+        }
+        finalParts.push(...toolCallParts);
+
+        return mapGeminiPartsToTurn(finalParts);
+      } catch (error) {
+        subject.error(error);
+        throw error;
+      }
+    })();
+
+    return { chunks$: subject.asObservable(), turn$ };
   }
 }

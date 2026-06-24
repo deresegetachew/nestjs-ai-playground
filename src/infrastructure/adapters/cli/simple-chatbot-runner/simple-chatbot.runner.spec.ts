@@ -23,7 +23,15 @@ describe('SimpleChatbotRunner', () => {
 
   beforeEach(async () => {
     mockCommandBus = {
-      execute: jest.fn().mockResolvedValue(of('chunk1', 'chunk2')),
+      execute: jest
+        .fn()
+        .mockResolvedValue(
+          of(
+            { type: 'text', text: 'chunk1' },
+            { type: 'text', text: 'chunk2' },
+            { type: 'turn_completed', isEnd: true },
+          ),
+        ),
     };
 
     const module: TestingModule = await Test.createTestingModule({

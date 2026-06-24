@@ -1,31 +1,43 @@
-import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
-import { Observable, of } from 'rxjs';
+import { Inject, Logger } from '@nestjs/common';
+import { ICommandHandler } from '@nestjs/cqrs';
+import { Observable } from 'rxjs';
 import { ReActAgentExecutor } from '../services/react-agent-executor.service';
 import { AskSimpleChatbotCommand } from '../commands/ask-simple-chatbot.command';
-import {
-  validateAndSanitizeInput,
-  UserInputSchema,
-} from '../guardrails/input.guardrail';
+import { Tool } from '../ports/tool.interface';
+import { AGENT_TOOLS } from '../ports/tool.tokens';
+import { SYSTEM_PROMPT } from '../constants/agent-prompts';
+import { AgentMessage, AgentStreamChunk } from '../ports/agent-types';
+import { CommandHandlerWithValidation } from '../decorators/command-handler-with-validation.decorator';
+import { AskSimpleChatbotCommandSchema } from '../guardrails/input.guardrail';
 
-@CommandHandler(AskSimpleChatbotCommand)
+@CommandHandlerWithValidation(AskSimpleChatbotCommand, AskSimpleChatbotCommandSchema)
 export class AskSimpleChatbotHandler implements ICommandHandler<
   AskSimpleChatbotCommand,
-  Observable<string>
+  Observable<AgentStreamChunk>
 > {
-  constructor(private readonly agent: ReActAgentExecutor) {}
+  private readonly logger = new Logger(AskSimpleChatbotHandler.name);
 
-  async execute(command: AskSimpleChatbotCommand): Promise<Observable<string>> {
-    // Pass user prompt through input guardrails (Zod validation & injection defense)
-    const validatedMessage = validateAndSanitizeInput(
-      command.message,
-      UserInputSchema,
+  constructor(
+    private readonly agent: ReActAgentExecutor,
+    @Inject(AGENT_TOOLS)
+    private readonly tools: Tool[],
+  ) {}
+
+  execute(
+    command: AskSimpleChatbotCommand,
+  ): Promise<Observable<AgentStreamChunk>> {
+    this.logger.debug(
+      `Received chatbot command. Message length: ${command.message.length}, History length: ${command.history.length}`,
     );
 
-    const result = await this.agent.run(
-      'You are a helpful AI assistant.',
-      [], // no tools for simple chatbot yet
-      [{ role: 'user', content: validatedMessage }],
+    // Prepend prior conversation history so the agent has full context.
+    const messages: AgentMessage[] = [
+      ...command.history,
+      { role: 'user', content: command.message },
+    ];
+
+    return Promise.resolve(
+      this.agent.run(SYSTEM_PROMPT, this.tools, messages),
     );
-    return of(result.reply);
   }
 }

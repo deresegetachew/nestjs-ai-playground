@@ -22,6 +22,7 @@ describe('ShellUI State Management', () => {
     useApp: () => ({
       exit: jest.fn(),
     }),
+    useInput: jest.fn(),
   } as any;
 
   const mockSelectInput = () => null;
@@ -44,7 +45,12 @@ describe('ShellUI State Management', () => {
 
     agentRegistry = new AgentRegistry(mockAgentsList);
     shellRouter = new ShellRouter();
-    onGetAgentStream = jest.fn().mockResolvedValue(of('bot response chunk'));
+    onGetAgentStream = jest.fn().mockResolvedValue(
+      of(
+        { type: 'text', text: 'bot response chunk' },
+        { type: 'turn_completed', isEnd: true },
+      ),
+    );
   });
 
   function findElement(node: any, type: any): any {
@@ -116,6 +122,7 @@ describe('ShellUI State Management', () => {
     const customInk = {
       ...mockInk,
       useApp: () => ({ exit: mockExit }),
+      useInput: jest.fn(),
     } as any;
 
     reactMockControl.reset();

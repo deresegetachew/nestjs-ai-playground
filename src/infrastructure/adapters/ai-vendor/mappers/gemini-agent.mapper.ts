@@ -10,6 +10,8 @@ import {
   AgentTurn,
   AgentToolDefinition,
 } from '../../../../application/ports/agent-types';
+import { sanitiseToolSchema } from '../../../../application/utils/schema.utils';
+
 
 interface LegacyPart {
   functionCalls?: Array<{
@@ -80,12 +82,9 @@ export function mapDomainMessagesToGemini(messages: AgentMessage[]): Content[] {
 }
 
 /**
- * Maps a Gemini response to a domain AgentTurn.
+ * Maps a list of Gemini Parts directly to a domain AgentTurn.
  */
-export function mapGeminiResponseToDomain(
-  response: GenerateContentResponse,
-): AgentTurn {
-  const parts = response.candidates?.[0]?.content?.parts || [];
+export function mapGeminiPartsToTurn(parts: Part[]): AgentTurn {
   const contentBlocks: AgentContentBlock[] = [];
 
   for (const part of parts) {
@@ -103,7 +102,7 @@ export function mapGeminiResponseToDomain(
           part.functionCall.id ||
           `call_${Math.random().toString(36).substr(2, 9)}`,
         name: part.functionCall.name,
-        input: (part.functionCall.args as Record<string, unknown>) || {},
+        input: part.functionCall.args || {},
       });
     } else if (
       legacyPart.functionCalls &&
@@ -122,18 +121,28 @@ export function mapGeminiResponseToDomain(
     }
   }
 
+  const hasToolUse = contentBlocks.some((b) => b.type === 'tool_use');
+  return new AgentTurn(hasToolUse ? 'tool_use' : 'end_turn', contentBlocks);
+}
+
+/**
+ * Maps a Gemini response to a domain AgentTurn.
+ */
+export function mapGeminiResponseToDomain(
+  response: GenerateContentResponse,
+): AgentTurn {
+  const parts = response.candidates?.[0]?.content?.parts || [];
+  const turn = mapGeminiPartsToTurn(parts);
+
   // Fallback if no parts parsed but text field has content
-  if (contentBlocks.length === 0 && response.text) {
-    contentBlocks.push({
-      type: 'text',
-      text: response.text,
-    });
+  if (turn.content.length === 0 && response.text) {
+    return new AgentTurn('end_turn', [
+      {
+        type: 'text',
+        text: response.text,
+      },
+    ]);
   }
 
-  const hasToolUse = contentBlocks.some((b) => b.type === 'tool_use');
-
-  return {
-    stopReason: hasToolUse ? 'tool_use' : 'end_turn',
-    content: contentBlocks,
-  };
+  return turn;
 }

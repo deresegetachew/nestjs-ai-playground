@@ -51,6 +51,7 @@ export function loadConfig(): AppConfig {
         },
         gemini: { apiKey: process.env.GEMINI_API_KEY || 'dummy' },
         openai: { apiKey: process.env.OPENAI_API_KEY || 'dummy' },
+        weatherAPIKey: process.env.WEATHER_API_KEY || 'dummy',
       });
     } else {
       throw new Error(
@@ -106,6 +107,11 @@ export function loadConfig(): AppConfig {
   if (process.env.OPENAI_API_KEY) {
     if (!config.openai) config.openai = {};
     config.openai.apiKey = process.env.OPENAI_API_KEY;
+  }
+
+  // Weather Overrides
+  if (process.env.WEATHER_API_KEY) {
+    config.weatherAPIKey = process.env.WEATHER_API_KEY;
   }
 
   // AI Overrides

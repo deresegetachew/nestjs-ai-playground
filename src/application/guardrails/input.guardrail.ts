@@ -6,6 +6,12 @@ const INJECTION_PATTERNS = [
   /ignore (?:previous|all) instructions/i,
   /you are now/i,
   /act as (?:an? )?(?:unrestricted|jailbreak)/i,
+  /disregard (?:the )?(?:above|previous)/i,
+  /forget everything/i,
+  /pretend (?:to be|you are)/i,
+  /new (?:role|persona|identity)/i,
+  /reveal (?:your )?(?:system )?prompt/i,
+  /what (?:were|are) your (?:instructions|rules)/i,
 ];
 
 /**
@@ -25,3 +31,22 @@ export function validateAndSanitizeInput<T extends string>(
 
   return parsed;
 }
+
+export const AskSimpleChatbotCommandSchema = z.object({
+  message: z.string()
+    .min(1, { message: 'Message cannot be empty.' })
+    .max(4000, { message: 'Message is too long.' })
+    .refine(
+      (msg) => {
+        try {
+          validateAndSanitizeInput(msg, UserInputSchema);
+          return true;
+        } catch {
+          return false;
+        }
+      },
+      { message: 'Potential prompt injection detected' }
+    ),
+  history: z.array(z.any()),
+});
+
