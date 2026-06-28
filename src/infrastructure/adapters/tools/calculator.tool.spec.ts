@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { CalculatorTool } from './calculator.tool';
 
 describe('CalculatorTool', () => {
@@ -48,5 +49,17 @@ describe('CalculatorTool', () => {
     await expect(
       tool.execute({ expression: 'console.log("hello")' }),
     ).rejects.toThrow();
+  });
+});
+
+describe('tool contract stability', () => {
+  it('definition snapshot', () => {
+    const tool = new CalculatorTool();
+    expect({
+      name: tool.name,
+      version: tool.version,
+      description: tool.description,
+      schema: z.toJSONSchema(tool.schema),
+    }).toMatchSnapshot();
   });
 });

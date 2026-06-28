@@ -91,6 +91,7 @@ describe('ReActAgentExecutor', () => {
       name: 'get_weather',
       description: 'Get weather details',
       schema,
+      version: '1',
       execute: jest.fn().mockResolvedValue({ temp: 22 }),
     };
 
@@ -155,6 +156,7 @@ describe('ReActAgentExecutor', () => {
       name: 'get_weather',
       description: 'Get weather details',
       schema,
+      version: '1',
       execute: jest.fn().mockResolvedValue({ temp: 22 }),
     };
 
@@ -216,6 +218,7 @@ describe('ReActAgentExecutor', () => {
       name: 'get_weather',
       description: 'Get weather details',
       schema,
+      version: '1',
       execute: jest.fn().mockResolvedValue({ temp: 22 }),
     };
 
@@ -256,6 +259,7 @@ describe('ReActAgentExecutor', () => {
       name: 'get_weather',
       description: 'Get weather details',
       schema,
+      version: '1',
       execute: jest.fn().mockResolvedValue({ temp: 22 }),
     };
 
@@ -338,6 +342,7 @@ describe('ReActAgentExecutor', () => {
       name: 'get_weather',
       description: 'Get weather details',
       schema,
+      version: '1',
       execute: jest.fn().mockResolvedValue({ temp: 22 }),
     };
 
@@ -379,6 +384,7 @@ describe('ReActAgentExecutor', () => {
       name: 'get_weather',
       description: 'Get weather details',
       schema,
+      version: '1',
       execute: jest.fn().mockResolvedValue({ temp: 22 }),
     };
 
@@ -444,6 +450,7 @@ describe('ReActAgentExecutor', () => {
       name: 'get_weather',
       description: 'Get weather details',
       schema,
+      version: '1',
       execute: jest.fn().mockRejectedValue(new Error('Database connection failed')),
     };
 
@@ -497,6 +504,7 @@ describe('ReActAgentExecutor', () => {
       name: 'get_weather',
       description: 'Get weather',
       schema,
+      version: '1',
       execute: jest.fn().mockResolvedValue({ temp: 22 }),
     };
 

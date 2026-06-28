@@ -17,6 +17,7 @@ export class CalculatorTool implements Tool<CalculatorInput, number> {
   readonly name = 'calculator';
   readonly description =
     'Evaluate mathematical expressions. ' + 'Returns a number.';
+  readonly version = '1';
   readonly schema = CalculatorInputSchema;
 
   async execute(input: CalculatorInput): Promise<number> {

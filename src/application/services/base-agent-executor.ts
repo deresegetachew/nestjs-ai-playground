@@ -113,9 +113,12 @@ export abstract class BaseAgentExecutor {
   protected mapToolsToDefinition(tools: Tool[]) {
     return tools.map((t) => {
       const jsonSchema = z.toJSONSchema(t.schema) as Record<string, unknown>;
+      const description = t.deprecated
+        ? `[DEPRECATED: ${t.deprecationMessage ?? 'use the newer version of this tool'}] ${t.description}`
+        : t.description;
       return {
         name: t.name,
-        description: t.description,
+        description,
         inputSchema: sanitiseToolSchema(jsonSchema),
       };
     });
