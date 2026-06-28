@@ -1,10 +1,13 @@
 import { Command, CommandRunner, InjectCommander } from 'nest-commander';
 import { CommandBus } from '@nestjs/cqrs';
+import { Inject } from '@nestjs/common';
+import * as crypto from 'node:crypto';
 import { AgentRegistry, RegistryCommand } from './agent.registry';
 import { ShellRouter } from './shell.router';
-import { Observable, tap } from 'rxjs';
 import { AskSimpleChatbotCommand } from '../../../../application/commands/ask-simple-chatbot.command';
 import { AgentMessage, AgentStreamChunk } from '../../../../application/ports/agent-types';
+import type { ConversationRepository } from '../../../../domain/ports/conversation-repository.port';
+import { CONVERSATION_REPOSITORY } from '../../../../domain/ports/conversation-repository.port';
 
 interface CommanderInstance {
   commands: RegistryCommand[];
@@ -17,21 +20,11 @@ interface CommanderInstance {
 export class ShellRunner extends CommandRunner {
   private readonly shellRouter: ShellRouter;
 
-  /**
-   * Per-agent conversation history.
-   * Key: normalised agent name (snake_case).
-   * Value: accumulated AgentMessage turns for the active interrupt session.
-   *
-   * History is kept only while the agent is mid-task (asked a clarifying
-   * question). Once it emits a "Final Answer:", the history is cleared so
-   * the next user message starts a fresh, unrelated conversation.
-   * It is also cleared explicitly when the user exits the agent session.
-   */
-  private readonly agentHistories = new Map<string, AgentMessage[]>();
-
   constructor(
     @InjectCommander() private readonly commander: CommanderInstance,
     private readonly commandBus: CommandBus,
+    @Inject(CONVERSATION_REPOSITORY)
+    private readonly conversationRepo: ConversationRepository,
   ) {
     super();
     this.shellRouter = new ShellRouter();
@@ -59,12 +52,20 @@ export class ShellRunner extends CommandRunner {
         Spinner={Spinner}
         agentRegistry={agentRegistry}
         shellRouter={this.shellRouter}
-        onGetAgentStream={async (agentName, message) =>
-          this.handleAgentStream(agentName, message)
+        onGetAgentStream={async (agentName, message, conversationId) =>
+          this.handleAgentStream(agentName, message, conversationId)
         }
-        onExitAgentSession={(agentName) => {
-          const key = agentName.replace(/-/g, '_').toLowerCase();
-          this.agentHistories.delete(key);
+        onListConversations={async (agentName) => {
+          const normalized = agentName.replace(/_/g, '-').toLowerCase();
+          const list = await this.conversationRepo.findAllByAgent(normalized);
+          return list.map((c) => ({
+            id: c.id,
+            updatedAt: c.updatedAt.toISOString(),
+          }));
+        }}
+        onLoadConversation={async (conversationId) => {
+          const c = await this.conversationRepo.findById(conversationId);
+          return c ? c.messages : [];
         }}
       />,
     );
@@ -75,63 +76,24 @@ export class ShellRunner extends CommandRunner {
 
   /**
    * Route agent execution request to CommandBus, returning a streaming
-   * observable that also maintains interrupt-aware conversation history.
-   *
-   * History lifecycle:
-   *  - If the agent ends with "Final Answer:" → history is cleared (task done).
-   *  - If the agent asks a question (no "Final Answer:") → history is kept
-   *    so the next user reply has full context (interrupt pattern).
+   * async iterable.
    */
   private async handleAgentStream(
     agentName: string,
     message: string,
-  ): Promise<Observable<AgentStreamChunk>> {
+    conversationId: string,
+  ): Promise<AsyncIterable<AgentStreamChunk>> {
     const normalizedName = agentName.replace(/-/g, '_').toLowerCase();
 
     if (normalizedName === 'simple_chatbot') {
-      const history = this.agentHistories.get(normalizedName) ?? [];
+      const traceId = crypto.randomUUID().replace(/-/g, '');
 
       const stream$ = await this.commandBus.execute<
         AskSimpleChatbotCommand,
-        Observable<AgentStreamChunk>
-      >(new AskSimpleChatbotCommand(message, history));
+        AsyncIterable<AgentStreamChunk>
+      >(new AskSimpleChatbotCommand(message, conversationId, traceId));
 
-      // Tap the stream to track text and detect whether this turn ends with
-      // a proper "Final Answer:" or with a clarifying question (interrupt).
-      let streamedText = '';
-      let hasFinalAnswer = false;
-
-      return stream$.pipe(
-        tap({
-          next: (chunk) => {
-            if (chunk.type === 'text') {
-              streamedText += chunk.text;
-            }
-            if (chunk.type === 'turn_completed' && chunk.isEnd) {
-              hasFinalAnswer = /final answer\s*:\s*/i.test(streamedText);
-            }
-          },
-          complete: () => {
-            if (hasFinalAnswer) {
-              // Task complete — next message is a new, unrelated question.
-              this.agentHistories.delete(normalizedName);
-            } else {
-              // Agent asked a clarifying question — extend the history so
-              // the next user reply arrives with full context.
-              const prev = this.agentHistories.get(normalizedName) ?? [];
-              this.agentHistories.set(normalizedName, [
-                ...prev,
-                { role: 'user', content: message },
-                { role: 'assistant', content: streamedText },
-              ]);
-            }
-          },
-          error: () => {
-            // On error, clear history so the session starts clean on retry.
-            this.agentHistories.delete(normalizedName);
-          },
-        }),
-      );
+      return stream$;
     }
 
     throw new Error(

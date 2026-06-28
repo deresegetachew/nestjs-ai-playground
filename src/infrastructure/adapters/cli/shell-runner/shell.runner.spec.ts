@@ -2,15 +2,22 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { Commander } from 'nest-commander/src/constants';
 import { CommandBus } from '@nestjs/cqrs';
 import { ShellRunner } from './shell.runner';
+import { CONVERSATION_REPOSITORY } from '../../../../domain/ports/conversation-repository.port';
 import { render } from 'ink';
 
 describe('ShellRunner', () => {
   let runner: ShellRunner;
   let mockCommandBus: { execute: jest.Mock };
+  let mockRepo: { findAllByAgent: jest.Mock; findById: jest.Mock };
 
   beforeEach(async () => {
     mockCommandBus = {
       execute: jest.fn(),
+    };
+
+    mockRepo = {
+      findAllByAgent: jest.fn().mockResolvedValue([]),
+      findById: jest.fn().mockResolvedValue(null),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -25,6 +32,10 @@ describe('ShellRunner', () => {
         {
           provide: CommandBus,
           useValue: mockCommandBus,
+        },
+        {
+          provide: CONVERSATION_REPOSITORY,
+          useValue: mockRepo,
         },
       ],
     }).compile();

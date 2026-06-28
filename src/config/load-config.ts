@@ -20,7 +20,9 @@ export function loadConfig(): AppConfig {
   const secretsPath = `${workspaceRoot}/secrets/${env}.yaml`;
 
   // Enforce secrets file existence for ALL environments
-  console.log(`🔍 Loading secrets from: ${secretsPath}`);
+  if (process.env.CLI_SHELL !== 'true') {
+    console.log(`🔍 Loading secrets from: ${secretsPath}`);
+  }
   if (!fs.existsSync(secretsPath)) {
     console.error(`❌ Secrets file NOT FOUND at: ${secretsPath}`);
     throw new Error(
@@ -124,6 +126,26 @@ export function loadConfig(): AppConfig {
   if (process.env.AUDIO_PARSER_PATH) {
     config.audioParser.path = process.env.AUDIO_PARSER_PATH;
   }
+
+  // Telemetry Overrides
+  if (!config.telemetry) config.telemetry = {};
+  if (process.env.OTEL_EXPORTER_OTLP_LOGS_ENDPOINT)
+    config.telemetry.otelExporterUrl = process.env.OTEL_EXPORTER_OTLP_LOGS_ENDPOINT;
+  if (process.env.OTEL_SERVICE_NAME)
+    config.telemetry.serviceName = process.env.OTEL_SERVICE_NAME;
+  if (!config.telemetry.instrumentations) config.telemetry.instrumentations = {};
+  if (process.env.OTEL_INSTRUMENTATION_FS_ENABLED)
+    config.telemetry.instrumentations.fs =
+      process.env.OTEL_INSTRUMENTATION_FS_ENABLED === 'true';
+  if (process.env.OTEL_INSTRUMENTATION_HTTP_ENABLED)
+    config.telemetry.instrumentations.http =
+      process.env.OTEL_INSTRUMENTATION_HTTP_ENABLED === 'true';
+  if (process.env.OTEL_INSTRUMENTATION_EXPRESS_ENABLED)
+    config.telemetry.instrumentations.express =
+      process.env.OTEL_INSTRUMENTATION_EXPRESS_ENABLED === 'true';
+  if (process.env.OTEL_INSTRUMENTATION_NEST_ENABLED)
+    config.telemetry.instrumentations.nest =
+      process.env.OTEL_INSTRUMENTATION_NEST_ENABLED === 'true';
 
   // Safety Guarantee: Refuse to run in "e2e mode" if NODE_ENV is not test
   if (process.env.RUN_E2E === 'true' && process.env.NODE_ENV !== 'test') {

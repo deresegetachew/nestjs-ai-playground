@@ -20,6 +20,7 @@ export interface LogEntry {
   steps?: LogStep[];
   finalAnswer?: string;
   isCollapsed?: boolean;
+  rawTurnText?: string;
 }
 
 export function getFriendlyErrorMessage(err: unknown): string {
@@ -70,9 +71,9 @@ export const LogItem: React.FC<LogItemProps> = ({ ink, log }) => {
 
     case 'bot': {
       const steps = log.steps || [];
-      const hasSteps = steps.length > 0 || log.text.trim().length > 0;
+      const hasContent = steps.length > 0 || log.text.trim().length > 0 || log.finalAnswer;
 
-      if (!hasSteps && !log.finalAnswer) {
+      if (!hasContent) {
         return null;
       }
 
@@ -81,13 +82,11 @@ export const LogItem: React.FC<LogItemProps> = ({ ink, log }) => {
       if (isCollapsed) {
         return (
           <Box flexDirection="column" marginBottom={1} paddingLeft={1}>
-            {steps.length > 0 && (
-              <Box flexDirection="row">
-                <Text color="cyan">▶ </Text>
-                <Text color="gray" bold>Model Thinking</Text>
-                <Text color="gray" dimColor> ({steps.length} steps, press Ctrl+T to expand)</Text>
-              </Box>
-            )}
+            <Box flexDirection="row">
+              <Text color="cyan">▶ </Text>
+              <Text color="gray" bold>Model Thinking</Text>
+              <Text color="gray" dimColor> ({steps.length} steps, press Ctrl+T to expand)</Text>
+            </Box>
             {log.finalAnswer ? (
               <Box marginTop={0}>
                 <Text color="white">{log.finalAnswer}</Text>
@@ -99,53 +98,54 @@ export const LogItem: React.FC<LogItemProps> = ({ ink, log }) => {
 
       return (
         <Box flexDirection="column" marginBottom={1} paddingLeft={1}>
-          {hasSteps && (
-            <Box flexDirection="column">
-              <Box flexDirection="row">
-                <Text color="cyan">▼ </Text>
-                <Text color="gray" bold>Model Thinking</Text>
-                <Text color="gray" dimColor> (press Ctrl+T to collapse)</Text>
-              </Box>
-              <Box
-                flexDirection="column"
-                borderStyle="round"
-                borderColor="cyan"
-                paddingX={1}
-                marginTop={0}
-                marginBottom={0}
-              >
-                {steps.map((step, idx) => {
-                  let color = 'white';
-                  let prefix = '';
-                  if (step.type === 'thought') {
-                    color = 'cyan';
-                    prefix = '[Thought]: ';
-                  } else if (step.type === 'calling_tool') {
-                    color = 'yellow';
-                    prefix = '[Calling Tool]: ';
-                  } else if (step.type === 'observation') {
-                    color = 'gray';
-                    prefix = '[Observation]: ';
-                  } else if (step.type === 'warning') {
-                    color = 'red';
-                    prefix = '[Warning]: ';
-                  }
-                  return (
-                    <Box key={idx} flexDirection="row">
-                      <Text color={color} bold>{prefix}</Text>
-                      <Text color="white">{step.text}</Text>
-                    </Box>
-                  );
-                })}
-                {log.text.trim().length > 0 && (
-                  <Box flexDirection="row">
-                    <Text color="cyan" bold>[Thought]: </Text>
-                    <Text color="white">{log.text}</Text>
-                  </Box>
-                )}
-              </Box>
+          <Box flexDirection="column">
+            <Box flexDirection="row">
+              <Text color="cyan">▼ </Text>
+              <Text color="gray" bold>Model Thinking</Text>
+              <Text color="gray" dimColor> (press Ctrl+T to collapse)</Text>
             </Box>
-          )}
+            <Box
+              flexDirection="column"
+              borderStyle="round"
+              borderColor="cyan"
+              paddingX={1}
+              marginTop={0}
+              marginBottom={0}
+            >
+              {steps.map((step, idx) => {
+                let color = 'white';
+                let prefix = '';
+                if (step.type === 'thought') {
+                  color = 'cyan';
+                  prefix = '[Thought]: ';
+                } else if (step.type === 'calling_tool') {
+                  color = 'yellow';
+                  prefix = '[Calling Tool]: ';
+                } else if (step.type === 'observation') {
+                  color = 'gray';
+                  prefix = '[Observation]: ';
+                } else if (step.type === 'warning') {
+                  color = 'red';
+                  prefix = '[Warning]: ';
+                }
+                return (
+                  <Box key={idx} flexDirection="row">
+                    <Text color={color} bold>{prefix}</Text>
+                    <Text color="white">{step.text}</Text>
+                  </Box>
+                );
+              })}
+              {log.text.trim().length > 0 && (
+                <Box flexDirection="row">
+                  <Text color="cyan" bold>[Thought]: </Text>
+                  <Text color="white">{log.text}</Text>
+                </Box>
+              )}
+              {steps.length === 0 && log.text.trim().length === 0 && (
+                <Text color="gray" italic>Direct response (0 steps taken)</Text>
+              )}
+            </Box>
+          </Box>
           {log.finalAnswer ? (
             <Box marginTop={0}>
               <Text color="white">{log.finalAnswer}</Text>

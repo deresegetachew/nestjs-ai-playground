@@ -32,21 +32,5 @@ export function validateAndSanitizeInput<T extends string>(
   return parsed;
 }
 
-export const AskSimpleChatbotCommandSchema = z.object({
-  message: z.string()
-    .min(1, { message: 'Message cannot be empty.' })
-    .max(4000, { message: 'Message is too long.' })
-    .refine(
-      (msg) => {
-        try {
-          validateAndSanitizeInput(msg, UserInputSchema);
-          return true;
-        } catch {
-          return false;
-        }
-      },
-      { message: 'Potential prompt injection detected' }
-    ),
-  history: z.array(z.any()),
-});
+
 

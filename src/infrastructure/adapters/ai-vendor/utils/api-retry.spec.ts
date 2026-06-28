@@ -17,6 +17,11 @@ describe('safeInvoke', () => {
       error: jest.fn(),
       log: jest.fn(),
     } as unknown as Logger;
+    jest.spyOn(Math, 'random').mockReturnValue(0);
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
   });
 
   it('should return successfully if no error occurs', async () => {
@@ -63,7 +68,7 @@ describe('safeInvoke', () => {
     expect(result).toBe('resolved-after-retry');
     expect(fn).toHaveBeenCalledTimes(2);
     expect(logger.warn).toHaveBeenCalledWith(
-      expect.stringContaining('Rate limited (429)'),
+      expect.objectContaining({ event: 'api_retry', httpStatus: 429, attempt: 1 }),
     );
     jest.useRealTimers();
   });
@@ -90,15 +95,19 @@ describe('safeInvoke', () => {
     expect(logger.warn).toHaveBeenCalledTimes(3);
     expect(logger.warn).toHaveBeenNthCalledWith(
       1,
-      expect.stringContaining('(Attempt 1/3)'),
+      expect.objectContaining({ event: 'api_retry', httpStatus: 429, attempt: 1 }),
     );
     expect(logger.warn).toHaveBeenNthCalledWith(
       2,
-      expect.stringContaining('(Attempt 2/3)'),
+      expect.objectContaining({ event: 'api_retry', httpStatus: 429, attempt: 2 }),
     );
     expect(logger.warn).toHaveBeenNthCalledWith(
       3,
-      expect.stringContaining('(Attempt 3/3)'),
+      expect.objectContaining({ event: 'api_retry', httpStatus: 429, attempt: 3 }),
+    );
+    // Exhausted: logger.error should fire once with api_retry_exhausted
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.objectContaining({ event: 'api_retry_exhausted', httpStatus: 429 }),
     );
 
     jest.useRealTimers();
@@ -121,7 +130,7 @@ describe('safeInvoke', () => {
     expect(result).toBe('resolved-after-overload');
     expect(fn).toHaveBeenCalledTimes(2);
     expect(logger.warn).toHaveBeenCalledWith(
-      expect.stringContaining('API overloaded (529)'),
+      expect.objectContaining({ event: 'api_retry', httpStatus: 529, attempt: 1 }),
     );
     jest.useRealTimers();
   });

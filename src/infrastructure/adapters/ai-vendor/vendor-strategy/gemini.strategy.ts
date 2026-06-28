@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { GoogleGenAI, Part } from '@google/genai';
-import { Observable, Subject } from 'rxjs';
+
 import { AppConfig } from '../../../../config/config.schema';
 import { AIModel } from '../../../../domain/models/ai-model.value-object';
 import { AIVendor } from '../../../../domain/models/ai-vendor.value-object';
@@ -9,12 +9,14 @@ import { AIClient } from '../../../../application/ports/ai-client.port';
 import {
   IAgentParams,
   AgentTurn,
+  AgentMessage,
 } from '../../../../application/ports/agent-types';
 import { safeInvoke } from '../utils/api-retry';
 import {
   mapDomainMessagesToGemini,
   mapDomainToolsToGemini,
   mapGeminiPartsToTurn,
+  mapGeminiError,
 } from '../mappers/gemini-agent.mapper';
 
 const GEMINI_MODELS = [
@@ -98,7 +100,7 @@ const GEMINI_MODELS = [
 export class GeminiStrategy implements AIClient {
   private readonly logger = new Logger(GeminiStrategy.name);
   private client: GoogleGenAI;
-  private defaultModel: string;
+  readonly defaultModel: string;
 
   constructor(private readonly configService: ConfigService<AppConfig>) {
     const apiKey = this.configService.get('gemini.apiKey', { infer: true });
@@ -141,22 +143,37 @@ export class GeminiStrategy implements AIClient {
   }
 
   createMessage(params: IAgentParams): {
-    chunks$: Observable<string>;
-    turn$: Promise<AgentTurn>;
+    chunks: AsyncIterable<string>;
+    turnPromise: Promise<AgentTurn>;
   } {
     const client = this.getClient();
     const systemInstruction = params.system;
     const contents = mapDomainMessagesToGemini(params.messages);
     const tools = mapDomainToolsToGemini(params.tools);
+    const model = params.model || this.defaultModel;
 
-    const subject = new Subject<string>();
+    this.logger.debug('gemini_request_sent', {
+      model,
+      messagesCount: contents.length,
+      toolsCount: tools.length,
+    });
 
-    const turn$ = (async () => {
+    let resolveTurn: (turn: AgentTurn) => void;
+    let rejectTurn: (err: any) => void;
+    // Uses the split-stream pattern to handle real-time chunk streaming via `chunks`
+    // and metadata/tool-call aggregation via the resolved `turnPromise` promise.
+    const turnPromise = new Promise<AgentTurn>((resolve, reject) => {
+      resolveTurn = resolve;
+      rejectTurn = reject;
+    });
+
+    const self = this;
+    async function* generateChunks(): AsyncGenerator<string, void, unknown> {
       try {
         const responseStream = await safeInvoke(
           () =>
             client.models.generateContentStream({
-              model: this.defaultModel,
+              model,
               contents,
               config: {
                 systemInstruction,
@@ -167,16 +184,18 @@ export class GeminiStrategy implements AIClient {
                     : undefined,
               },
             }),
-          this.logger,
+          self.logger,
         );
 
         let aggregatedText = '';
         const toolCallParts: Part[] = [];
+        let inputTokens = 0;
+        let outputTokens = 0;
 
         for await (const chunk of responseStream) {
           const text = chunk.text;
           if (text) {
-            subject.next(text);
+            yield text;
             aggregatedText += text;
           }
           const parts = chunk.candidates?.[0]?.content?.parts;
@@ -187,13 +206,17 @@ export class GeminiStrategy implements AIClient {
               }
             }
           }
+          if (chunk.usageMetadata) {
+            inputTokens = chunk.usageMetadata.promptTokenCount ?? 0;
+            outputTokens = chunk.usageMetadata.candidatesTokenCount ?? 0;
+          }
         }
 
-        // NOTE: The ordering here is crucial. We must call subject.complete() (completing chunks$)
-        // BEFORE returning the AgentTurn (resolving turn$). This guarantees that any stream
-        // subscription hooks in the executor finish executing and cleaning up before the
-        // main execution loop is allowed to resume with the parsed AgentTurn promise.
-        subject.complete();
+        self.logger.debug('gemini_response_received', {
+          model,
+          textLength: aggregatedText.length,
+          toolCallsCount: toolCallParts.length,
+        });
 
         const finalParts: Part[] = [];
         if (aggregatedText) {
@@ -201,13 +224,31 @@ export class GeminiStrategy implements AIClient {
         }
         finalParts.push(...toolCallParts);
 
-        return mapGeminiPartsToTurn(finalParts);
+        const turnResult = mapGeminiPartsToTurn(finalParts, { inputTokens, outputTokens });
+        resolveTurn(turnResult);
       } catch (error) {
-        subject.error(error);
-        throw error;
+        const mappedError = mapGeminiError(error);
+        rejectTurn(mappedError);
+        throw mappedError;
       }
-    })();
+    }
 
-    return { chunks$: subject.asObservable(), turn$ };
+    return { chunks: generateChunks(), turnPromise };
+  }
+
+  async countTokens(messages: AgentMessage[], model?: string): Promise<number> {
+    const client = this.getClient();
+    const resolvedModel = model || this.defaultModel;
+    const contents = mapDomainMessagesToGemini(messages);
+
+    const response = await safeInvoke(
+      () =>
+        client.models.countTokens({
+          model: resolvedModel,
+          contents,
+        }),
+      this.logger,
+    );
+    return response.totalTokens ?? 0;
   }
 }

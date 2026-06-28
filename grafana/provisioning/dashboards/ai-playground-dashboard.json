@@ -1,0 +1,2431 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "datasource",
+          "uid": "grafana"
+        },
+        "enable": true,
+        "hide": true,
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": 1,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 100,
+      "title": "\ud83d\udd34 SLO Health",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "Loki"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 80
+              },
+              {
+                "color": "green",
+                "value": 95
+              }
+            ]
+          },
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "displayName": "Success Rate",
+          "links": [
+            {
+              "title": "Filter by status: success",
+              "url": "${__url.path}?${__url.params}&var-status=success",
+              "targetBlank": false
+            },
+            {
+              "title": "Explore raw logs in new tab \u2197",
+              "url": "/explore?orgId=1&schemaVersion=1&panes=%7B%22left%22%3A%20%7B%22datasource%22%3A%20%22Loki%22%2C%20%22queries%22%3A%20%5B%7B%22refId%22%3A%20%22A%22%2C%20%22datasource%22%3A%20%7B%22uid%22%3A%20%22Loki%22%2C%20%22type%22%3A%20%22loki%22%7D%2C%20%22expr%22%3A%20%22%7Bservice_name%3D%5C%22nestjs-ai-playground%5C%22%7D%20%7C%20json%20%7C%20event%3D%5C%22run_complete%5C%22%20%7C%20status%3D%5C%22success%5C%22%22%2C%20%22queryType%22%3A%20%22range%22%7D%5D%2C%20%22range%22%3A%20%7B%22from%22%3A%20%22%24%7B__from%7D%22%2C%20%22to%22%3A%20%22%24%7B__to%7D%22%7D%7D%7D",
+              "targetBlank": true
+            }
+          ]
+        }
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 5,
+        "x": 0,
+        "y": 1
+      },
+      "id": 101,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value_and_name"
+      },
+      "title": "Agent Success Rate",
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "Loki"
+          },
+          "editorMode": "code",
+          "expr": "sum(count_over_time({service_name=\"nestjs-ai-playground\"} | json | event=\"run_complete\" | status=\"success\" | agentName=~\"$agent_name\" | model=~\"$model\" [$__range]))",
+          "legendFormat": "Successful",
+          "queryType": "instant",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "Loki"
+          },
+          "editorMode": "code",
+          "expr": "sum(count_over_time({service_name=\"nestjs-ai-playground\"} | json | event=\"run_complete\" | agentName=~\"$agent_name\" | model=~\"$model\" [$__range]))",
+          "legendFormat": "Total",
+          "queryType": "instant",
+          "refId": "B"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "calculateField",
+          "options": {
+            "alias": "Success Rate %",
+            "binary": {
+              "left": "Value #A",
+              "operator": "/",
+              "right": "Value #B"
+            },
+            "mode": "binaryOperation"
+          }
+        },
+        {
+          "id": "calculateField",
+          "options": {
+            "alias": "Success Rate",
+            "binary": {
+              "left": "Success Rate %",
+              "operator": "*",
+              "right": "100"
+            },
+            "mode": "binaryOperation"
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Value #A": true,
+              "Value #B": true,
+              "Time": true,
+              "Success Rate %": true
+            }
+          }
+        }
+      ],
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "Loki"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          },
+          "displayName": "Total Runs",
+          "links": [
+            {
+              "title": "Reset status filter",
+              "url": "${__url.path}?${__url.params}&var-status=All",
+              "targetBlank": false
+            },
+            {
+              "title": "Explore raw logs in new tab \u2197",
+              "url": "/explore?orgId=1&schemaVersion=1&panes=%7B%22left%22%3A%20%7B%22datasource%22%3A%20%22Loki%22%2C%20%22queries%22%3A%20%5B%7B%22refId%22%3A%20%22A%22%2C%20%22datasource%22%3A%20%7B%22uid%22%3A%20%22Loki%22%2C%20%22type%22%3A%20%22loki%22%7D%2C%20%22expr%22%3A%20%22%7Bservice_name%3D%5C%22nestjs-ai-playground%5C%22%7D%20%7C%20json%20%7C%20event%3D%5C%22run_start%5C%22%22%2C%20%22queryType%22%3A%20%22range%22%7D%5D%2C%20%22range%22%3A%20%7B%22from%22%3A%20%22%24%7B__from%7D%22%2C%20%22to%22%3A%20%22%24%7B__to%7D%22%7D%7D%7D",
+              "targetBlank": true
+            }
+          ]
+        }
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 5,
+        "x": 5,
+        "y": 1
+      },
+      "id": 102,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "reduceOptions": {
+          "calcs": [
+            "sum"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value"
+      },
+      "title": "Total Runs",
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "Loki"
+          },
+          "editorMode": "code",
+          "expr": "sum(count_over_time({service_name=\"nestjs-ai-playground\"} | json | event=\"run_start\" | agentName=~\"$agent_name\" [$__range]))",
+          "legendFormat": "Runs",
+          "queryType": "instant",
+          "refId": "A"
+        }
+      ],
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "Loki"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
+            ]
+          },
+          "displayName": "Error Count",
+          "links": [
+            {
+              "title": "Filter by status: failed",
+              "url": "${__url.path}?${__url.params}&var-status=failed",
+              "targetBlank": false
+            },
+            {
+              "title": "Explore raw logs in new tab \u2197",
+              "url": "/explore?orgId=1&schemaVersion=1&panes=%7B%22left%22%3A%20%7B%22datasource%22%3A%20%22Loki%22%2C%20%22queries%22%3A%20%5B%7B%22refId%22%3A%20%22A%22%2C%20%22datasource%22%3A%20%7B%22uid%22%3A%20%22Loki%22%2C%20%22type%22%3A%20%22loki%22%7D%2C%20%22expr%22%3A%20%22%7Bservice_name%3D%5C%22nestjs-ai-playground%5C%22%7D%20%7C%20json%20%7C%20level%3D%5C%22ERROR%5C%22%22%2C%20%22queryType%22%3A%20%22range%22%7D%5D%2C%20%22range%22%3A%20%7B%22from%22%3A%20%22%24%7B__from%7D%22%2C%20%22to%22%3A%20%22%24%7B__to%7D%22%7D%7D%7D",
+              "targetBlank": true
+            }
+          ]
+        }
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 5,
+        "x": 10,
+        "y": 1
+      },
+      "id": 103,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "reduceOptions": {
+          "calcs": [
+            "sum"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value"
+      },
+      "title": "Error Count",
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "Loki"
+          },
+          "editorMode": "code",
+          "expr": "sum(count_over_time({service_name=\"nestjs-ai-playground\"} | json | level=\"ERROR\" | agentName=~\"$agent_name\" [$__range]))",
+          "legendFormat": "Errors",
+          "queryType": "instant",
+          "refId": "A"
+        }
+      ],
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "Loki"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 3
+              }
+            ]
+          },
+          "displayName": "Loop Warnings",
+          "links": [
+            {
+              "title": "Filter by status: loop_terminated",
+              "url": "${__url.path}?${__url.params}&var-status=loop_terminated",
+              "targetBlank": false
+            },
+            {
+              "title": "Explore raw logs in new tab \u2197",
+              "url": "/explore?orgId=1&schemaVersion=1&panes=%7B%22left%22%3A%20%7B%22datasource%22%3A%20%22Loki%22%2C%20%22queries%22%3A%20%5B%7B%22refId%22%3A%20%22A%22%2C%20%22datasource%22%3A%20%7B%22uid%22%3A%20%22Loki%22%2C%20%22type%22%3A%20%22loki%22%7D%2C%20%22expr%22%3A%20%22%7Bservice_name%3D%5C%22nestjs-ai-playground%5C%22%7D%20%7C%20json%20%7C%20event%3D%5C%22loop_warning%5C%22%22%2C%20%22queryType%22%3A%20%22range%22%7D%5D%2C%20%22range%22%3A%20%7B%22from%22%3A%20%22%24%7B__from%7D%22%2C%20%22to%22%3A%20%22%24%7B__to%7D%22%7D%7D%7D",
+              "targetBlank": true
+            }
+          ]
+        }
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 5,
+        "x": 15,
+        "y": 1
+      },
+      "id": 104,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "reduceOptions": {
+          "calcs": [
+            "sum"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value"
+      },
+      "title": "Loop Warnings",
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "Loki"
+          },
+          "editorMode": "code",
+          "expr": "sum(count_over_time({service_name=\"nestjs-ai-playground\"} | json | event=\"loop_warning\" | agentName=~\"$agent_name\" [$__range]))",
+          "legendFormat": "Loop Warnings",
+          "queryType": "instant",
+          "refId": "A"
+        }
+      ],
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "Loki"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
+            ]
+          },
+          "displayName": "Max Turns Exceeded",
+          "links": [
+            {
+              "title": "Filter by status: max_turns_exceeded",
+              "url": "${__url.path}?${__url.params}&var-status=max_turns_exceeded",
+              "targetBlank": false
+            },
+            {
+              "title": "Explore raw logs in new tab \u2197",
+              "url": "/explore?orgId=1&schemaVersion=1&panes=%7B%22left%22%3A%20%7B%22datasource%22%3A%20%22Loki%22%2C%20%22queries%22%3A%20%5B%7B%22refId%22%3A%20%22A%22%2C%20%22datasource%22%3A%20%7B%22uid%22%3A%20%22Loki%22%2C%20%22type%22%3A%20%22loki%22%7D%2C%20%22expr%22%3A%20%22%7Bservice_name%3D%5C%22nestjs-ai-playground%5C%22%7D%20%7C%20json%20%7C%20event%3D%5C%22run_complete%5C%22%20%7C%20status%3D%5C%22max_turns_exceeded%5C%22%22%2C%20%22queryType%22%3A%20%22range%22%7D%5D%2C%20%22range%22%3A%20%7B%22from%22%3A%20%22%24%7B__from%7D%22%2C%20%22to%22%3A%20%22%24%7B__to%7D%22%7D%7D%7D",
+              "targetBlank": true
+            }
+          ]
+        }
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 20,
+        "y": 1
+      },
+      "id": 105,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "reduceOptions": {
+          "calcs": [
+            "sum"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value"
+      },
+      "title": "Max Turns Exceeded",
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "Loki"
+          },
+          "editorMode": "code",
+          "expr": "sum(count_over_time({service_name=\"nestjs-ai-playground\"} | json | event=\"run_complete\" | status=\"max_turns_exceeded\" | agentName=~\"$agent_name\" [$__range]))",
+          "legendFormat": "Max Turns",
+          "queryType": "instant",
+          "refId": "A"
+        }
+      ],
+      "type": "stat"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 5
+      },
+      "id": 200,
+      "title": "\ud83d\udcca Agent Performance Summary",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "Loki"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 6
+      },
+      "id": 3,
+      "title": "Agent Performance Table",
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "Loki"
+          },
+          "editorMode": "code",
+          "expr": "sum by (agentName, model) (count_over_time({service_name=\"nestjs-ai-playground\"} | json | event=\"run_start\" | agentName=~\"$agent_name\" | model=~\"$model\" | stopReason=~\"$stop_reason\" [$__range]))",
+          "legendFormat": "Runs",
+          "queryType": "instant",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "Loki"
+          },
+          "editorMode": "code",
+          "expr": "avg by (agentName, model) (avg_over_time({service_name=\"nestjs-ai-playground\"} | json | event=\"run_complete\" | agentName=~\"$agent_name\" | model=~\"$model\" | unwrap totalLatencyMs | stopReason=~\"$stop_reason\" [$__range]))",
+          "legendFormat": "Avg Latency",
+          "queryType": "instant",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "Loki"
+          },
+          "editorMode": "code",
+          "expr": "avg by (agentName, model) (quantile_over_time(0.5, {service_name=\"nestjs-ai-playground\"} | json | event=\"run_complete\" | agentName=~\"$agent_name\" | model=~\"$model\" | unwrap totalLatencyMs | stopReason=~\"$stop_reason\" [$__range]))",
+          "legendFormat": "p50 Latency",
+          "queryType": "instant",
+          "refId": "C"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "Loki"
+          },
+          "editorMode": "code",
+          "expr": "avg by (agentName, model) (quantile_over_time(0.95, {service_name=\"nestjs-ai-playground\"} | json | event=\"run_complete\" | agentName=~\"$agent_name\" | model=~\"$model\" | unwrap totalLatencyMs | stopReason=~\"$stop_reason\" [$__range]))",
+          "legendFormat": "p95 Latency",
+          "queryType": "instant",
+          "refId": "D"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "Loki"
+          },
+          "editorMode": "code",
+          "expr": "avg by (agentName, model) (avg_over_time({service_name=\"nestjs-ai-playground\"} | json | event=\"run_complete\" | agentName=~\"$agent_name\" | model=~\"$model\" | unwrap totalInputTokens | stopReason=~\"$stop_reason\" [$__range]))",
+          "legendFormat": "Avg Input Tokens",
+          "queryType": "instant",
+          "refId": "E"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "Loki"
+          },
+          "editorMode": "code",
+          "expr": "avg by (agentName, model) (avg_over_time({service_name=\"nestjs-ai-playground\"} | json | event=\"run_complete\" | agentName=~\"$agent_name\" | model=~\"$model\" | unwrap totalOutputTokens | stopReason=~\"$stop_reason\" [$__range]))",
+          "legendFormat": "Avg Output Tokens",
+          "queryType": "instant",
+          "refId": "F"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "Loki"
+          },
+          "editorMode": "code",
+          "expr": "avg by (agentName, model) (avg_over_time({service_name=\"nestjs-ai-playground\"} | json | event=\"run_complete\" | agentName=~\"$agent_name\" | model=~\"$model\" | unwrap totalTurns | stopReason=~\"$stop_reason\" [$__range]))",
+          "legendFormat": "Avg Turns",
+          "queryType": "instant",
+          "refId": "G"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "Loki"
+          },
+          "editorMode": "code",
+          "expr": "sum by (agentName, model) (count_over_time({service_name=\"nestjs-ai-playground\"} | json | event=\"run_complete\" | status!=\"success\" | agentName=~\"$agent_name\" | model=~\"$model\" | stopReason=~\"$stop_reason\" [$__range]))",
+          "legendFormat": "Errors",
+          "queryType": "instant",
+          "refId": "H"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "Loki"
+          },
+          "editorMode": "code",
+          "expr": "sum by (agentName, model) (count_over_time({service_name=\"nestjs-ai-playground\"} | json | event=\"conversation_summarized\" | agentName=~\"$agent_name\" | model=~\"$model\" [$__range]))",
+          "legendFormat": "Summarizations",
+          "queryType": "instant",
+          "refId": "I"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "indexByName": {},
+            "renameByName": {
+              "agentName": "Agent Name",
+              "model": "Model",
+              "Value #A": "Total Runs",
+              "Value #B": "Avg Latency (ms)",
+              "Value #C": "p50 (ms)",
+              "Value #D": "p95 (ms)",
+              "Value #E": "Avg Input Tokens",
+              "Value #F": "Avg Output Tokens",
+              "Value #G": "Avg Turns",
+              "Value #H": "Error Count",
+              "Value #I": "Summarizations"
+            }
+          }
+        }
+      ],
+      "type": "table",
+      "fieldConfig": {
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Agent Name"
+            },
+            "properties": [
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Filter dashboard by agent: ${__value.text}",
+                    "url": "${__url.path}?${__url.params}&var-agent_name=${__value.text}",
+                    "targetBlank": false
+                  },
+                  {
+                    "title": "Explore agent logs in new tab \u2197",
+                    "url": "/explore?orgId=1&schemaVersion=1&panes=%7B%22left%22%3A%20%7B%22datasource%22%3A%20%22Loki%22%2C%20%22queries%22%3A%20%5B%7B%22refId%22%3A%20%22A%22%2C%20%22datasource%22%3A%20%7B%22uid%22%3A%20%22Loki%22%2C%20%22type%22%3A%20%22loki%22%7D%2C%20%22expr%22%3A%20%22%7Bservice_name%3D%5C%22nestjs-ai-playground%5C%22%7D%20%7C%20json%20%7C%20agentName%3D%5C%22%24%7B__value.text%7D%5C%22%22%2C%20%22queryType%22%3A%20%22range%22%7D%5D%2C%20%22range%22%3A%20%7B%22from%22%3A%20%22%24%7B__from%7D%22%2C%20%22to%22%3A%20%22%24%7B__to%7D%22%7D%7D%7D",
+                    "targetBlank": true
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Model"
+            },
+            "properties": [
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Filter dashboard by model: ${__value.text}",
+                    "url": "${__url.path}?${__url.params}&var-model=${__value.text}",
+                    "targetBlank": false
+                  },
+                  {
+                    "title": "Explore model logs in new tab \u2197",
+                    "url": "/explore?orgId=1&schemaVersion=1&panes=%7B%22left%22%3A%20%7B%22datasource%22%3A%20%22Loki%22%2C%20%22queries%22%3A%20%5B%7B%22refId%22%3A%20%22A%22%2C%20%22datasource%22%3A%20%7B%22uid%22%3A%20%22Loki%22%2C%20%22type%22%3A%20%22loki%22%7D%2C%20%22expr%22%3A%20%22%7Bservice_name%3D%5C%22nestjs-ai-playground%5C%22%7D%20%7C%20json%20%7C%20model%3D%5C%22%24%7B__value.text%7D%5C%22%22%2C%20%22queryType%22%3A%20%22range%22%7D%5D%2C%20%22range%22%3A%20%7B%22from%22%3A%20%22%24%7B__from%7D%22%2C%20%22to%22%3A%20%22%24%7B__to%7D%22%7D%7D%7D",
+                    "targetBlank": true
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 13
+      },
+      "id": 300,
+      "title": "\ud83d\udcc8 Reliability Over Time",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "Loki"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "fillOpacity": 15,
+            "gradientMode": "opacity"
+          }
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 0,
+        "y": 14
+      },
+      "id": 301,
+      "title": "Error Rate Over Time",
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "Loki"
+          },
+          "editorMode": "code",
+          "expr": "sum by (agentName) (count_over_time({service_name=\"nestjs-ai-playground\"} | json | level=\"ERROR\" | agentName=~\"$agent_name\" [$__interval]))",
+          "legendFormat": "{{agentName}} errors",
+          "queryType": "range",
+          "refId": "A"
+        }
+      ],
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "Loki"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 80,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            }
+          }
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 8,
+        "y": 14
+      },
+      "id": 302,
+      "title": "Run Status Distribution Over Time",
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "Loki"
+          },
+          "editorMode": "code",
+          "expr": "sum by (status) (count_over_time({service_name=\"nestjs-ai-playground\"} | json | event=\"run_complete\" | agentName=~\"$agent_name\" [$__interval]))",
+          "legendFormat": "{{status}}",
+          "queryType": "range",
+          "refId": "A"
+        }
+      ],
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "Loki"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "fillOpacity": 15,
+            "gradientMode": "opacity"
+          },
+          "color": {
+            "fixedColor": "orange",
+            "mode": "fixed"
+          }
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 16,
+        "y": 14
+      },
+      "id": 303,
+      "title": "Loop Warning Rate",
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "Loki"
+          },
+          "editorMode": "code",
+          "expr": "sum by (agentName) (count_over_time({service_name=\"nestjs-ai-playground\"} | json | event=\"loop_warning\" | agentName=~\"$agent_name\" [$__interval]))",
+          "legendFormat": "{{agentName}} loops",
+          "queryType": "range",
+          "refId": "A"
+        }
+      ],
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 20
+      },
+      "id": 400,
+      "title": "\u26a1 Latency & Throughput",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "Loki"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 2000
+              },
+              {
+                "color": "red",
+                "value": 5000
+              }
+            ]
+          },
+          "unit": "ms",
+          "displayName": "p50"
+        }
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 5,
+        "x": 0,
+        "y": 21
+      },
+      "id": 10,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "value_and_name"
+      },
+      "title": "p50 Latency",
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "Loki"
+          },
+          "editorMode": "code",
+          "expr": "avg by (agentName) (quantile_over_time(0.5, {service_name=\"nestjs-ai-playground\"} | json | event=\"run_complete\" | agentName=~\"$agent_name\" | unwrap totalLatencyMs [$__interval]))",
+          "legendFormat": "{{agentName}}",
+          "queryType": "range",
+          "refId": "A"
+        }
+      ],
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "Loki"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 4000
+              },
+              {
+                "color": "red",
+                "value": 10000
+              }
+            ]
+          },
+          "unit": "ms",
+          "displayName": "p95"
+        }
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 5,
+        "x": 5,
+        "y": 21
+      },
+      "id": 11,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "value_and_name"
+      },
+      "title": "p95 Latency",
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "Loki"
+          },
+          "editorMode": "code",
+          "expr": "avg by (agentName) (quantile_over_time(0.95, {service_name=\"nestjs-ai-playground\"} | json | event=\"run_complete\" | agentName=~\"$agent_name\" | unwrap totalLatencyMs [$__interval]))",
+          "legendFormat": "{{agentName}}",
+          "queryType": "range",
+          "refId": "A"
+        }
+      ],
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "Loki"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 8000
+              },
+              {
+                "color": "red",
+                "value": 15000
+              }
+            ]
+          },
+          "unit": "ms",
+          "displayName": "p99"
+        }
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 5,
+        "x": 10,
+        "y": 21
+      },
+      "id": 12,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "value_and_name"
+      },
+      "title": "p99 Latency",
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "Loki"
+          },
+          "editorMode": "code",
+          "expr": "avg by (agentName) (quantile_over_time(0.99, {service_name=\"nestjs-ai-playground\"} | json | event=\"run_complete\" | agentName=~\"$agent_name\" | unwrap totalLatencyMs [$__interval]))",
+          "legendFormat": "{{agentName}}",
+          "queryType": "range",
+          "refId": "A"
+        }
+      ],
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "Loki"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          },
+          "displayName": "Avg Turns / Run"
+        }
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 15,
+        "y": 21
+      },
+      "id": 401,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "mean"
+          ]
+        },
+        "textMode": "value"
+      },
+      "title": "Avg Turns / Run",
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "Loki"
+          },
+          "editorMode": "code",
+          "expr": "avg by (agentName) (avg_over_time({service_name=\"nestjs-ai-playground\"} | json | event=\"run_complete\" | agentName=~\"$agent_name\" | unwrap totalTurns [$__range]))",
+          "legendFormat": "{{agentName}}",
+          "queryType": "instant",
+          "refId": "A"
+        }
+      ],
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "Loki"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "fillOpacity": 15,
+            "gradientMode": "opacity"
+          },
+          "unit": "ms"
+        }
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 5,
+        "x": 19,
+        "y": 21
+      },
+      "id": 402,
+      "title": "LLM Calls / Interval",
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "Loki"
+          },
+          "editorMode": "code",
+          "expr": "sum by (agentName) (count_over_time({service_name=\"nestjs-ai-playground\"} | json | event=\"llm_response\" | agentName=~\"$agent_name\" [$__interval]))",
+          "legendFormat": "{{agentName}}",
+          "queryType": "range",
+          "refId": "A"
+        }
+      ],
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "Loki"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "fillOpacity": 15,
+            "gradientMode": "opacity"
+          },
+          "unit": "ms"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 0,
+        "y": 25
+      },
+      "id": 4,
+      "title": "Agent Run Latency History (Avg)",
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "Loki"
+          },
+          "editorMode": "code",
+          "expr": "avg by (agentName, model) (avg_over_time({service_name=\"nestjs-ai-playground\"} | json | event=\"run_complete\" | agentName=~\"$agent_name\" | model=~\"$model\" | unwrap totalLatencyMs | stopReason=~\"$stop_reason\" [$__interval]))",
+          "legendFormat": "{{agentName}} ({{model}})",
+          "queryType": "range",
+          "refId": "A"
+        }
+      ],
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "Loki"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "fillOpacity": 15,
+            "gradientMode": "opacity"
+          },
+          "unit": "ms"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 12,
+        "y": 25
+      },
+      "id": 403,
+      "title": "LLM Turn Latency (Per-Turn Avg)",
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "Loki"
+          },
+          "editorMode": "code",
+          "expr": "avg by (agentName, model) (avg_over_time({service_name=\"nestjs-ai-playground\"} | json | event=\"llm_response\" | agentName=~\"$agent_name\" | model=~\"$model\" | unwrap latencyMs [$__interval]))",
+          "legendFormat": "{{agentName}} ({{model}})",
+          "queryType": "range",
+          "refId": "A"
+        }
+      ],
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "Loki"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 60,
+            "lineWidth": 1,
+            "gradientMode": "opacity"
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        }
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 24,
+        "x": 0,
+        "y": 31
+      },
+      "id": 404,
+      "title": "Turn Activity (Turn Start Rate)",
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "Loki"
+          },
+          "editorMode": "code",
+          "expr": "sum by (agentName) (count_over_time({service_name=\"nestjs-ai-playground\"} | json | event=\"turn_start\" | agentName=~\"$agent_name\" [$__interval]))",
+          "legendFormat": "{{agentName}}",
+          "queryType": "range",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 36
+      },
+      "id": 500,
+      "title": "\ud83d\udd27 Tool Observability",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "Loki"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short",
+          "links": [
+            {
+              "title": "Drilldown to ${__series.name} tool logs",
+              "url": "${__url.path}?${__url.params}&var-tool_name=${__series.name}",
+              "targetBlank": false
+            },
+            {
+              "title": "Explore raw logs in new tab \u2197",
+              "url": "/explore?orgId=1&schemaVersion=1&panes=%7B%22left%22%3A%20%7B%22datasource%22%3A%20%22Loki%22%2C%20%22queries%22%3A%20%5B%7B%22refId%22%3A%20%22A%22%2C%20%22datasource%22%3A%20%7B%22uid%22%3A%20%22Loki%22%2C%20%22type%22%3A%20%22loki%22%7D%2C%20%22expr%22%3A%20%22%7Bservice_name%3D%5C%22nestjs-ai-playground%5C%22%7D%20%7C%20json%20%7C%20event%3D%5C%22tool_call%5C%22%20%7C%20toolName%3D%5C%22%24%7B__series.name%7D%5C%22%22%2C%20%22queryType%22%3A%20%22range%22%7D%5D%2C%20%22range%22%3A%20%7B%22from%22%3A%20%22%24%7B__from%7D%22%2C%20%22to%22%3A%20%22%24%7B__to%7D%22%7D%7D%7D",
+              "targetBlank": true
+            }
+          ]
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 0,
+        "y": 37
+      },
+      "id": 501,
+      "options": {
+        "displayMode": "gradient",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "sum"
+          ]
+        },
+        "showUnfilled": true
+      },
+      "title": "Tool Call Volume (by tool)",
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "Loki"
+          },
+          "editorMode": "code",
+          "expr": "sum by (toolName) (count_over_time({service_name=\"nestjs-ai-playground\"} | json | event=\"tool_call\" | agentName=~\"$agent_name\" [$__range]))",
+          "legendFormat": "{{toolName}}",
+          "queryType": "instant",
+          "refId": "A"
+        }
+      ],
+      "type": "bargauge"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "Loki"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 6,
+        "y": 37
+      },
+      "id": 502,
+      "title": "Tool Success Rate (by tool)",
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "Loki"
+          },
+          "editorMode": "code",
+          "expr": "sum by (toolName) (count_over_time({service_name=\"nestjs-ai-playground\"} | json | event=\"tool_result\" | success=\"true\" | agentName=~\"$agent_name\" [$__range]))",
+          "legendFormat": "Success",
+          "queryType": "instant",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "Loki"
+          },
+          "editorMode": "code",
+          "expr": "sum by (toolName) (count_over_time({service_name=\"nestjs-ai-playground\"} | json | event=\"tool_result\" | success=\"false\" | agentName=~\"$agent_name\" [$__range]))",
+          "legendFormat": "Failures",
+          "queryType": "instant",
+          "refId": "B"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "joinByField",
+          "options": {
+            "byField": "toolName",
+            "mode": "outer"
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "renameByName": {
+              "Value #A": "Successes",
+              "Value #B": "Failures"
+            }
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "Loki"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short",
+          "links": [
+            {
+              "title": "Filter tool logs by error type: ${__series.name}",
+              "url": "${__url.path}?${__url.params}&var-tool_error_type=${__series.name}",
+              "targetBlank": false
+            },
+            {
+              "title": "Explore raw logs in new tab \u2197",
+              "url": "/explore?orgId=1&schemaVersion=1&panes=%7B%22left%22%3A%20%7B%22datasource%22%3A%20%22Loki%22%2C%20%22queries%22%3A%20%5B%7B%22refId%22%3A%20%22A%22%2C%20%22datasource%22%3A%20%7B%22uid%22%3A%20%22Loki%22%2C%20%22type%22%3A%20%22loki%22%7D%2C%20%22expr%22%3A%20%22%7Bservice_name%3D%5C%22nestjs-ai-playground%5C%22%7D%20%7C%20json%20%7C%20event%3D%5C%22tool_result%5C%22%20%7C%20success%3D%5C%22false%5C%22%20%7C%20errorType%3D%5C%22%24%7B__series.name%7D%5C%22%22%2C%20%22queryType%22%3A%20%22range%22%7D%5D%2C%20%22range%22%3A%20%7B%22from%22%3A%20%22%24%7B__from%7D%22%2C%20%22to%22%3A%20%22%24%7B__to%7D%22%7D%7D%7D",
+              "targetBlank": true
+            }
+          ]
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 5,
+        "x": 14,
+        "y": 37
+      },
+      "id": 503,
+      "options": {
+        "displayMode": "gradient",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "sum"
+          ]
+        },
+        "showUnfilled": true
+      },
+      "title": "Tool Failure Types",
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "Loki"
+          },
+          "editorMode": "code",
+          "expr": "sum by (errorType) (count_over_time({service_name=\"nestjs-ai-playground\"} | json | event=\"tool_result\" | success=\"false\" | agentName=~\"$agent_name\" [$__range]))",
+          "legendFormat": "{{errorType}}",
+          "queryType": "instant",
+          "refId": "A"
+        }
+      ],
+      "type": "bargauge"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "Loki"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "ms"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 5,
+        "x": 19,
+        "y": 37
+      },
+      "id": 504,
+      "options": {
+        "displayMode": "gradient",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "mean"
+          ]
+        },
+        "showUnfilled": true
+      },
+      "title": "Tool Avg Latency (ms)",
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "Loki"
+          },
+          "editorMode": "code",
+          "expr": "avg by (toolName) (avg_over_time({service_name=\"nestjs-ai-playground\"} | json | event=\"tool_result\" | agentName=~\"$agent_name\" | unwrap latencyMs [$__range]))",
+          "legendFormat": "{{toolName}}",
+          "queryType": "instant",
+          "refId": "A"
+        }
+      ],
+      "type": "bargauge"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "Loki"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 24,
+        "x": 0,
+        "y": 43
+      },
+      "id": 505,
+      "title": "Tool Execution Logs",
+      "description": "Log stream of tool execution events (tool_call and tool_result). Dynamically filtered by the Tool Name variable when clicking the gauge above.",
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "Loki"
+          },
+          "editorMode": "code",
+          "expr": "{service_name=\"nestjs-ai-playground\"} | json | event=~\"tool_call|tool_result\" | toolName=~\"$tool_name\" | errorType=~\"$tool_error_type\" | agentName=~\"$agent_name\"",
+          "queryType": "range",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "dedupStrategy": "none",
+        "enableLogDetails": true,
+        "prettifyLogMessage": false,
+        "showLabels": false,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": true
+      },
+      "type": "logs"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 49
+      },
+      "id": 600,
+      "title": "\ud83e\ude99 Token & Context Observability",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "Loki"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 0,
+        "y": 50
+      },
+      "id": 8,
+      "options": {
+        "displayMode": "gradient",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "sum"
+          ]
+        },
+        "showUnfilled": true
+      },
+      "title": "Total Token Consumption (Input + Output) per Agent \u00d7 Model",
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "Loki"
+          },
+          "editorMode": "code",
+          "expr": "sum by (agentName, model) (sum_over_time({service_name=\"nestjs-ai-playground\"} | json | event=\"run_complete\" | agentName=~\"$agent_name\" | model=~\"$model\" | unwrap totalInputTokens | stopReason=~\"$stop_reason\" [$__range])) + sum by (agentName, model) (sum_over_time({service_name=\"nestjs-ai-playground\"} | json | event=\"run_complete\" | agentName=~\"$agent_name\" | model=~\"$model\" | unwrap totalOutputTokens | stopReason=~\"$stop_reason\" [$__range]))",
+          "legendFormat": "{{agentName}} / {{model}}",
+          "queryType": "instant",
+          "refId": "A"
+        }
+      ],
+      "type": "bargauge"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "Loki"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 80,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            }
+          }
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 6,
+        "y": 50
+      },
+      "id": 601,
+      "title": "Input vs Output Token Ratio Over Time",
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "Loki"
+          },
+          "editorMode": "code",
+          "expr": "sum by (agentName) (sum_over_time({service_name=\"nestjs-ai-playground\"} | json | event=\"run_complete\" | agentName=~\"$agent_name\" | model=~\"$model\" | unwrap totalInputTokens | stopReason=~\"$stop_reason\" [$__interval]))",
+          "legendFormat": "{{agentName}} Input",
+          "queryType": "range",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "Loki"
+          },
+          "editorMode": "code",
+          "expr": "sum by (agentName) (sum_over_time({service_name=\"nestjs-ai-playground\"} | json | event=\"run_complete\" | agentName=~\"$agent_name\" | model=~\"$model\" | unwrap totalOutputTokens | stopReason=~\"$stop_reason\" [$__interval]))",
+          "legendFormat": "{{agentName}} Output",
+          "queryType": "range",
+          "refId": "B"
+        }
+      ],
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "Loki"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "fillOpacity": 20,
+            "gradientMode": "opacity"
+          },
+          "color": {
+            "fixedColor": "purple",
+            "mode": "fixed"
+          }
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 4,
+        "x": 12,
+        "y": 50
+      },
+      "id": 602,
+      "title": "Context Summarizations",
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "Loki"
+          },
+          "editorMode": "code",
+          "expr": "sum by (agentName) (count_over_time({service_name=\"nestjs-ai-playground\"} | json | event=\"conversation_summarized\" | agentName=~\"$agent_name\" [$__interval]))",
+          "legendFormat": "{{agentName}}",
+          "queryType": "range",
+          "refId": "A"
+        }
+      ],
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "Loki"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short",
+          "links": [
+            {
+              "title": "Filter by stop reason: ${__series.name}",
+              "url": "${__url.path}?${__url.params}&var-stop_reason=${__series.name}",
+              "targetBlank": false
+            },
+            {
+              "title": "Explore raw logs in new tab \u2197",
+              "url": "/explore?orgId=1&schemaVersion=1&panes=%7B%22left%22%3A%20%7B%22datasource%22%3A%20%22Loki%22%2C%20%22queries%22%3A%20%5B%7B%22refId%22%3A%20%22A%22%2C%20%22datasource%22%3A%20%7B%22uid%22%3A%20%22Loki%22%2C%20%22type%22%3A%20%22loki%22%7D%2C%20%22expr%22%3A%20%22%7Bservice_name%3D%5C%22nestjs-ai-playground%5C%22%7D%20%7C%20json%20%7C%20event%3D%5C%22run_complete%5C%22%20%7C%20stopReason%3D%5C%22%24%7B__series.name%7D%5C%22%22%2C%20%22queryType%22%3A%20%22range%22%7D%5D%2C%20%22range%22%3A%20%7B%22from%22%3A%20%22%24%7B__from%7D%22%2C%20%22to%22%3A%20%22%24%7B__to%7D%22%7D%7D%7D",
+              "targetBlank": true
+            }
+          ]
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 4,
+        "x": 16,
+        "y": 50
+      },
+      "id": 603,
+      "options": {
+        "displayMode": "gradient",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "sum"
+          ]
+        },
+        "showUnfilled": true
+      },
+      "title": "Stop Reason Distribution",
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "Loki"
+          },
+          "editorMode": "code",
+          "expr": "sum by (stopReason) (count_over_time({service_name=\"nestjs-ai-playground\"} | json | event=\"llm_response\" | agentName=~\"$agent_name\" [$__range]))",
+          "legendFormat": "{{stopReason}}",
+          "queryType": "instant",
+          "refId": "A"
+        }
+      ],
+      "type": "bargauge"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "Loki"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 2,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "purple",
+                "value": null
+              }
+            ]
+          },
+          "displayName": "Avg Thought Turns / Run"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 4,
+        "x": 20,
+        "y": 50
+      },
+      "id": 604,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "reduceOptions": {
+          "calcs": [
+            "mean"
+          ]
+        },
+        "textMode": "value"
+      },
+      "title": "Avg Thought Turns / Run",
+      "description": "Average number of LLM turns per run that included a reasoning/thought phase. Higher = more complex reasoning.",
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "Loki"
+          },
+          "editorMode": "code",
+          "expr": "avg(avg_over_time({service_name=\"nestjs-ai-playground\"} | json | event=\"run_complete\" | agentName=~\"$agent_name\" | model=~\"$model\" | unwrap totalThoughtTurns [$__range]))",
+          "legendFormat": "Avg Thought Turns",
+          "queryType": "instant",
+          "refId": "A"
+        }
+      ],
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "Loki"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "fillOpacity": 15,
+            "gradientMode": "opacity"
+          }
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 24,
+        "x": 0,
+        "y": 56
+      },
+      "id": 2,
+      "title": "Log Ingestion Rate",
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "Loki"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate({service_name=\"nestjs-ai-playground\"}[1m]))",
+          "queryType": "range",
+          "refId": "A"
+        }
+      ],
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 62
+      },
+      "id": 700,
+      "title": "\ud83d\udd04 Retry & Reliability",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "Loki"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "fillOpacity": 20,
+            "gradientMode": "opacity"
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 0,
+        "y": 63
+      },
+      "id": 701,
+      "title": "API Retry Rate Over Time",
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "Loki"
+          },
+          "editorMode": "code",
+          "expr": "sum by (httpStatus) (count_over_time({service_name=\"nestjs-ai-playground\"} | json | event=\"api_retry\" | agentName=~\"$agent_name\" [$__interval]))",
+          "legendFormat": "HTTP {{httpStatus}}",
+          "queryType": "range",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "Loki"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "links": [
+            {
+              "title": "Drilldown to HTTP ${__series.name} retry logs",
+              "url": "${__url.path}?${__url.params}&var-http_status=${__series.name}",
+              "targetBlank": false
+            },
+            {
+              "title": "Explore raw logs in new tab \u2197",
+              "url": "/explore?orgId=1&schemaVersion=1&panes=%7B%22left%22%3A%20%7B%22datasource%22%3A%20%22Loki%22%2C%20%22queries%22%3A%20%5B%7B%22refId%22%3A%20%22A%22%2C%20%22datasource%22%3A%20%7B%22uid%22%3A%20%22Loki%22%2C%20%22type%22%3A%20%22loki%22%7D%2C%20%22expr%22%3A%20%22%7Bservice_name%3D%5C%22nestjs-ai-playground%5C%22%7D%20%7C%20json%20%7C%20event%3D%5C%22api_retry%5C%22%20%7C%20httpStatus%3D%5C%22%24%7B__series.name%7D%5C%22%22%2C%20%22queryType%22%3A%20%22range%22%7D%5D%2C%20%22range%22%3A%20%7B%22from%22%3A%20%22%24%7B__from%7D%22%2C%20%22to%22%3A%20%22%24%7B__to%7D%22%7D%7D%7D",
+              "targetBlank": true
+            }
+          ]
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 12,
+        "y": 63
+      },
+      "id": 702,
+      "title": "Retries by HTTP Status",
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "Loki"
+          },
+          "editorMode": "code",
+          "expr": "sum by (httpStatus) (count_over_time({service_name=\"nestjs-ai-playground\"} | json | event=\"api_retry\" | agentName=~\"$agent_name\" [$__range]))",
+          "legendFormat": "{{httpStatus}}",
+          "queryType": "instant",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "sum"
+          ],
+          "values": false,
+          "fields": ""
+        },
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "valueMode": "color"
+      },
+      "type": "bargauge"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "Loki"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "displayName": "Retry Exhaustions"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 18,
+        "y": 63
+      },
+      "id": 703,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "reduceOptions": {
+          "calcs": [
+            "sum"
+          ],
+          "values": false,
+          "fields": ""
+        },
+        "textMode": "value"
+      },
+      "title": "Retry Exhaustions",
+      "description": "Count of runs where all API retries failed. Any value > 0 is a production incident.",
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "Loki"
+          },
+          "editorMode": "code",
+          "expr": "sum(count_over_time({service_name=\"nestjs-ai-playground\"} | json | event=\"api_retry_exhausted\" | agentName=~\"$agent_name\" [$__range]))",
+          "legendFormat": "Exhaustions",
+          "queryType": "instant",
+          "refId": "A"
+        }
+      ],
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "Loki"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 24,
+        "x": 0,
+        "y": 69
+      },
+      "id": 704,
+      "title": "API Retry Logs",
+      "description": "Log stream of vendor API retries. Dynamically filtered by the HTTP Status variable when clicking the gauges above.",
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "Loki"
+          },
+          "editorMode": "code",
+          "expr": "{service_name=\"nestjs-ai-playground\"} | json | event=~\"api_retry|api_retry_exhausted\" | httpStatus=~\"$http_status\" | agentName=~\"$agent_name\"",
+          "queryType": "range",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "dedupStrategy": "none",
+        "enableLogDetails": true,
+        "prettifyLogMessage": false,
+        "showLabels": false,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": true
+      },
+      "type": "logs"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 75
+      },
+      "id": 5,
+      "title": "\ud83d\udccb Live Application Logs",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "Loki"
+      },
+      "gridPos": {
+        "h": 15,
+        "w": 24,
+        "x": 0,
+        "y": 76
+      },
+      "id": 6,
+      "options": {
+        "showLabels": false,
+        "wrapLogMessage": true,
+        "enableLogDetails": true,
+        "showTime": true,
+        "sortOrder": "Descending"
+      },
+      "title": "Log Console Stream",
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "Loki"
+          },
+          "editorMode": "code",
+          "expr": "{service_name=\"nestjs-ai-playground\"} | json | agentName=~\"$agent_name\" | line_format \"[{{.traceId}}] [{{.agentName}}] [{{.context}}] {{if .event}}event={{.event}}{{else}}{{.message}}{{end}} {{if .model}}model={{.model}}{{end}} {{if .status}}status={{.status}}{{end}} {{if .totalLatencyMs}}latency={{.totalLatencyMs}}ms{{end}} {{if .totalInputTokens}}in={{.totalInputTokens}} out={{.totalOutputTokens}}{{else if .inputTokens}}in={{.inputTokens}} out={{.outputTokens}}{{end}} {{if .toolName}}tool={{.toolName}}{{end}}\"",
+          "queryType": "range",
+          "refId": "A"
+        }
+      ],
+      "type": "logs"
+    },
+    {
+      "collapsed": true,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 91
+      },
+      "id": 800,
+      "title": "\ud83d\udd0d Run Drilldown (select a Run ID above)",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "Loki"
+      },
+      "gridPos": {
+        "h": 15,
+        "w": 24,
+        "x": 0,
+        "y": 92
+      },
+      "id": 801,
+      "title": "Run Event Timeline",
+      "description": "All events for the selected $run_id in chronological order. Set the Run ID variable above.",
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "Loki"
+          },
+          "editorMode": "code",
+          "expr": "{service_name=\"nestjs-ai-playground\"} | json | runId=~\"$run_id\" | agentName=~\"$agent_name\" | line_format \"[{{.event}}] turn={{.turn}} {{if .status}}status={{.status}}{{end}}{{if .toolName}} tool={{.toolName}}{{end}}{{if .latencyMs}} latency={{.latencyMs}}ms{{end}}{{if .totalLatencyMs}} totalLatency={{.totalLatencyMs}}ms{{end}}\"",
+          "queryType": "range",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "dedupStrategy": "none",
+        "enableLogDetails": true,
+        "prettifyLogMessage": false,
+        "showLabels": false,
+        "showTime": true,
+        "sortOrder": "Ascending",
+        "wrapLogMessage": true
+      },
+      "type": "logs"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "Loki"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        }
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 24,
+        "x": 0,
+        "y": 107
+      },
+      "id": 802,
+      "title": "Single Run Stats",
+      "description": "Summary stats from the run_complete event for the selected run ID.",
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "Loki"
+          },
+          "editorMode": "code",
+          "expr": "last_over_time({service_name=\"nestjs-ai-playground\"} | json | event=\"run_complete\" | runId=~\"$run_id\" | unwrap totalLatencyMs [$__range])",
+          "legendFormat": "Total Latency (ms)",
+          "queryType": "instant",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "Loki"
+          },
+          "editorMode": "code",
+          "expr": "last_over_time({service_name=\"nestjs-ai-playground\"} | json | event=\"run_complete\" | runId=~\"$run_id\" | unwrap totalTurns [$__range])",
+          "legendFormat": "Total Turns",
+          "queryType": "instant",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "Loki"
+          },
+          "editorMode": "code",
+          "expr": "last_over_time({service_name=\"nestjs-ai-playground\"} | json | event=\"run_complete\" | runId=~\"$run_id\" | unwrap totalInputTokens [$__range])",
+          "legendFormat": "Input Tokens",
+          "queryType": "instant",
+          "refId": "C"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "Loki"
+          },
+          "editorMode": "code",
+          "expr": "last_over_time({service_name=\"nestjs-ai-playground\"} | json | event=\"run_complete\" | runId=~\"$run_id\" | unwrap totalOutputTokens [$__range])",
+          "legendFormat": "Output Tokens",
+          "queryType": "instant",
+          "refId": "D"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "Loki"
+          },
+          "editorMode": "code",
+          "expr": "last_over_time({service_name=\"nestjs-ai-playground\"} | json | event=\"run_complete\" | runId=~\"$run_id\" | unwrap totalThoughtTurns [$__range])",
+          "legendFormat": "Thought Turns",
+          "queryType": "instant",
+          "refId": "E"
+        }
+      ],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": false,
+          "fields": ""
+        },
+        "textMode": "value_and_name"
+      },
+      "type": "stat"
+    }
+  ],
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": [
+    "nestjs",
+    "otel",
+    "loki",
+    "agents"
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": true,
+          "value": [
+            "$__all"
+          ]
+        },
+        "hide": 0,
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
+        "name": "agent_name",
+        "options": [
+          {
+            "selected": true,
+            "text": "All",
+            "value": "$__all"
+          },
+          {
+            "selected": false,
+            "text": "simple-chatbot",
+            "value": "simple-chatbot"
+          }
+        ],
+        "query": "simple-chatbot",
+        "queryValue": "",
+        "skipUrlSync": false,
+        "type": "custom"
+      },
+      {
+        "current": {
+          "selected": true,
+          "value": [
+            "$__all"
+          ]
+        },
+        "hide": 0,
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
+        "name": "model",
+        "options": [
+          {
+            "selected": true,
+            "text": "All",
+            "value": "$__all"
+          },
+          {
+            "selected": false,
+            "text": "gemini-2.0-flash",
+            "value": "gemini-2.0-flash"
+          },
+          {
+            "selected": false,
+            "text": "gemini-2.5-flash",
+            "value": "gemini-2.5-flash"
+          },
+          {
+            "selected": false,
+            "text": "gemini-2.5-pro",
+            "value": "gemini-2.5-pro"
+          }
+        ],
+        "query": "gemini-2.0-flash,gemini-2.5-flash,gemini-2.5-pro",
+        "queryValue": "",
+        "skipUrlSync": false,
+        "type": "custom"
+      },
+      {
+        "current": {
+          "selected": true,
+          "value": [
+            "$__all"
+          ]
+        },
+        "hide": 0,
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": false,
+        "name": "status",
+        "options": [
+          {
+            "selected": true,
+            "text": "All",
+            "value": "$__all"
+          },
+          {
+            "selected": false,
+            "text": "success",
+            "value": "success"
+          },
+          {
+            "selected": false,
+            "text": "failed",
+            "value": "failed"
+          },
+          {
+            "selected": false,
+            "text": "timeout",
+            "value": "timeout"
+          },
+          {
+            "selected": false,
+            "text": "max_turns_exceeded",
+            "value": "max_turns_exceeded"
+          },
+          {
+            "selected": false,
+            "text": "loop_terminated",
+            "value": "loop_terminated"
+          }
+        ],
+        "query": "success,failed,timeout,max_turns_exceeded,loop_terminated",
+        "queryValue": "",
+        "skipUrlSync": false,
+        "type": "custom"
+      },
+      {
+        "current": {
+          "selected": false,
+          "value": ""
+        },
+        "hide": 0,
+        "name": "run_id",
+        "label": "Run ID",
+        "query": "",
+        "skipUrlSync": false,
+        "type": "textbox"
+      },
+      {
+        "current": {
+          "selected": true,
+          "value": ".*"
+        },
+        "hide": 0,
+        "name": "tool_name",
+        "label": "Tool Name Filter",
+        "query": ".*",
+        "skipUrlSync": false,
+        "type": "textbox"
+      },
+      {
+        "current": {
+          "selected": true,
+          "value": ".*"
+        },
+        "hide": 0,
+        "name": "http_status",
+        "label": "HTTP Status Filter",
+        "query": ".*",
+        "skipUrlSync": false,
+        "type": "textbox"
+      },
+      {
+        "current": {
+          "selected": true,
+          "value": ".*"
+        },
+        "hide": 0,
+        "name": "tool_error_type",
+        "label": "Tool Error Filter",
+        "query": ".*",
+        "skipUrlSync": false,
+        "type": "textbox"
+      },
+      {
+        "current": {
+          "selected": true,
+          "value": ".*"
+        },
+        "hide": 0,
+        "name": "stop_reason",
+        "label": "Stop Reason Filter",
+        "query": ".*",
+        "skipUrlSync": false,
+        "type": "textbox"
+      }
+    ]
+  },
+  "title": "NestJS AI Playground Observability",
+  "uid": "nestjs-ai-playground",
+  "version": 9,
+  "weekStart": ""
+}

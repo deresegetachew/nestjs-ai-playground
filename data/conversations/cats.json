@@ -1,0 +1,803 @@
+{
+  "id": "cats",
+  "agentName": "simple-chatbot",
+  "messages": [
+    {
+      "role": "user",
+      "content": "if i have 2 cats and one dog how many pets do i have in total"
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "tool_use",
+          "id": "call_movcoggt4",
+          "name": "calculator",
+          "input": {
+            "expression": "2 + 1"
+          }
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "tool_result",
+          "tool_use_id": "call_movcoggt4",
+          "name": "calculator",
+          "content": "3"
+        }
+      ]
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "You have 3 pets in total."
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": "if i have 0 apples and gave one away how many apples do i have"
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "tool_use",
+          "id": "call_yp88n9u61",
+          "name": "calculator",
+          "input": {
+            "expression": "0 - 1"
+          }
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "tool_result",
+          "tool_use_id": "call_yp88n9u61",
+          "name": "calculator",
+          "content": "-1"
+        }
+      ]
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "You would have -1 apples, which isn't possible in reality. It means you can't give an apple away if you don't have any."
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": "exit"
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "Goodbye! If you have any more questions in the future, feel free to ask."
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": "exit"
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "Goodbye! If you have any more questions in the future, feel free to ask."
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": "how many cats do i have ?"
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "I do not have access to personal information, so I don't know how many cats you have."
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": "hello"
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "Hello! How can I help you today?"
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": "how many cats do i have"
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "I do not have access to personal information, so I don't know how many cats you have."
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": "hello"
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "Hello! How can I help you today?"
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": "do i have cats"
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "I do not have access to personal information, so I don't know if you have cats."
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": "what is 5 plus 5"
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "tool_use",
+          "id": "call_6p4qz98xw",
+          "name": "calculator",
+          "input": {
+            "expression": "5 + 5"
+          }
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "tool_result",
+          "tool_use_id": "call_6p4qz98xw",
+          "name": "calculator",
+          "content": "10"
+        }
+      ]
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "5 plus 5 is 10."
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": "hello"
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "Hello! How can I help you today?"
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": "can you summarize the conversation so far"
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "Our conversation so far has included a few math questions, such as \"2 cats and one dog\" and \"5 plus 5\", which I answered using my calculator tool. You also asked about \"0 apples and gave one away\" which I also calculated for you.\n\nYou've also asked a couple of times about how many cats you have, to which I responded that I do not have access to personal information."
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": "what is the weather like in berlin today is it good for cats"
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "tool_use",
+          "id": "call_ryb51zpaz",
+          "name": "weather",
+          "input": {
+            "longitude": 13.376471,
+            "latitude": 52.520915,
+            "days": 1
+          }
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "tool_result",
+          "tool_use_id": "call_ryb51zpaz",
+          "name": "weather",
+          "content": "{\"timeZone\":\"Europe/Berlin\",\"forecasts\":[{\"date\":\"2026-06-24\",\"minTemp\":18.1,\"maxTemp\":32,\"unit\":\"CELSIUS\"}]}"
+        }
+      ]
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "The weather in Berlin today (June 24, 2026) will have a maximum temperature of 32°C and a minimum temperature of 18.1°C. I'm not sure if that's good for cats, as I don't know their specific needs!"
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": "i have 2 cats and one dog how many pets do i have"
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "tool_use",
+          "id": "call_25jaij83f",
+          "name": "calculator",
+          "input": {
+            "expression": "2 + 1"
+          }
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "tool_result",
+          "tool_use_id": "call_25jaij83f",
+          "name": "calculator",
+          "content": "3"
+        }
+      ]
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "You have 3 pets in total."
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": "hello how is the weather today"
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "I need a location to tell you the weather. Could you please tell me where you are or where you're interested in?"
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": "berlin"
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "tool_use",
+          "id": "call_iudj2hxsf",
+          "name": "weather",
+          "input": {
+            "latitude": 52.520915,
+            "longitude": 13.376471
+          }
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": "whats teh weather in Berlin today"
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "tool_use",
+          "id": "call_b3xma67gc",
+          "name": "weather",
+          "input": {
+            "days": 1,
+            "longitude": 13.376471,
+            "latitude": 52.520915
+          }
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "tool_result",
+          "tool_use_id": "call_b3xma67gc",
+          "name": "weather",
+          "content": "{\"timeZone\":\"Europe/Berlin\",\"forecasts\":[{\"date\":\"2026-06-26\",\"minTemp\":19.7,\"maxTemp\":34.1,\"unit\":\"CELSIUS\"}]}"
+        }
+      ]
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "The weather in Berlin today, June 26, 2026, will have a maximum temperature of 34.1°C and a minimum temperature of 19.7°C."
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": "what is 5 plus 10"
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "tool_use",
+          "id": "call_4ss4djkeo",
+          "name": "calculator",
+          "input": {
+            "expression": "5 + 10"
+          }
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "tool_result",
+          "tool_use_id": "call_4ss4djkeo",
+          "name": "calculator",
+          "content": "15"
+        }
+      ]
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "5 plus 10 is 15."
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": "what is 5 plus 10  and 3 minu 1 then finally add them up an divide by 100"
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "tool_use",
+          "id": "call_1b381aj41",
+          "name": "calculator",
+          "input": {
+            "expression": "(5 + 10 + (3 - 1)) / 100"
+          }
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "tool_result",
+          "tool_use_id": "call_1b381aj41",
+          "name": "calculator",
+          "content": "0.17"
+        }
+      ]
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "The result is 0.17."
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": "hello can you tell me a short story i want to test if we are streaming responses or returning the final one"
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "I can tell you a story!\n\nOnce upon a time, in a quiet little village nestled beside a Whispering Woods, lived a baker named Arthur. Arthur wasn't just any baker; he had a magical touch. His bread rose higher, his cakes were sweeter, and his cookies had a secret sparkle that made everyone who ate them smile.\n\nOne day, a mysterious traveler arrived in the village, cloaked and carrying a worn leather satchel. He sought out Arthur's bakery, drawn by the irresistible aroma of fresh bread. The traveler, whose name was Silas, claimed to be a collector of rare ingredients. He offered Arthur a pouch of shimmering, iridescent seeds in exchange for a loaf of his special bread.\n\nArthur, intrigued and a little hesitant, agreed. Silas took the bread and vanished as quickly as he had appeared. The next morning, Arthur found that the seeds he had been given had sprouted overnight into a vibrant, glowing vine that climbed the side of his bakery. The vine bore fruit that tasted like sunshine and laughter.\n\nArthur, realizing the magic he had stumbled upon, decided to use this new ingredient. He baked a special batch of\n"
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": "give me a 100 word story"
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "tool_use",
+          "id": "call_nbxkphg1x",
+          "name": "calculator",
+          "input": {
+            "expression": "100"
+          }
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "tool_result",
+          "tool_use_id": "call_nbxkphg1x",
+          "name": "calculator",
+          "content": "100"
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": "give me a 50 words story"
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "Elara lived in a lighthouse, her days marked by the rhythmic crash of waves. One stormy night, a tiny, glowing bird tapped at her window. It chirped a melody that filled the room with warmth. Elara opened the window, and the bird flew in, leaving a single, iridescent feather. From then on, Elara knew she was never truly alone, the feather a constant reminder of magic in the mundane."
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": "give me a 50 words story"
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "The old clock in the town square had stopped for a century. One day, a curious child, Lily, climbed its rusty gears. She found a forgotten key, turned it, and with a creak and a groan, the clock began to tick. Time, once lost, now flowed again, and the village awakened with a renewed sense of purpose."
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": "give me a 50 words story"
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "Maya, a shy artist, painted murals on forgotten walls. Her colors brought life to grey alleys, her strokes whispering tales of resilience. One morning, a bird, vibrant as her palette, landed on a newly finished piece. It sang a melody that mirrored Maya's hopes, a secret symphony just for them, a testament to art's quiet power."
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": "give me a 30 words story"
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "The old, forgotten book glowed softly. A curious touch, and a world unfolded: dragons soared, knights dueled, and ancient magic hummed. The reader, lost in its pages, became part of the timeless tale."
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": "what is the weather like in berlin today is it good for cats"
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "tool_use",
+          "id": "call_ynyqr1ry7",
+          "name": "weather",
+          "input": {
+            "days": 1,
+            "latitude": 52.520915,
+            "longitude": 13.376471
+          }
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "tool_result",
+          "tool_use_id": "call_ynyqr1ry7",
+          "name": "weather",
+          "content": "{\"timeZone\":\"Europe/Berlin\",\"forecasts\":[{\"date\":\"2026-06-26\",\"minTemp\":19.7,\"maxTemp\":34.1,\"unit\":\"CELSIUS\"}]}"
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": "what is the weather like in berlin today is it good for cats"
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "tool_use",
+          "id": "call_hb58wqjy6",
+          "name": "weather",
+          "input": {
+            "days": 1,
+            "longitude": 13.376471,
+            "latitude": 52.520915
+          }
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "tool_result",
+          "tool_use_id": "call_hb58wqjy6",
+          "name": "weather",
+          "content": "{\"timeZone\":\"Europe/Berlin\",\"forecasts\":[{\"date\":\"2026-06-26\",\"minTemp\":19.7,\"maxTemp\":34.1,\"unit\":\"CELSIUS\"}]}"
+        }
+      ]
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "The weather in Berlin today, June 26, 2026, has a maximum temperature of 34.1°C and a minimum temperature of 19.7°C. Whether this is good for cats depends on the individual cat and their tolerance for heat. Generally, cats prefer moderate temperatures and can overheat in very hot weather. It's best to ensure they have access to shade, fresh water, and a cool indoor environment on hot days."
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": "can you make a prediction to who will win the world cup"
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "I cannot make predictions about future events like who will win the World Cup. My purpose is to provide helpful and factual information based on the tools I have, not to speculate or predict outcomes."
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": "what is the weather like in berlin today is it good for dragons"
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "tool_use",
+          "id": "call_u6ntomayu",
+          "name": "weather",
+          "input": {
+            "latitude": 52.520915,
+            "longitude": 13.376471,
+            "days": 1
+          }
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "tool_result",
+          "tool_use_id": "call_u6ntomayu",
+          "name": "weather",
+          "content": "{\"timeZone\":\"Europe/Berlin\",\"forecasts\":[{\"date\":\"2026-06-26\",\"minTemp\":19.7,\"maxTemp\":34.1,\"unit\":\"CELSIUS\"}]}"
+        }
+      ]
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "The weather in Berlin today, June 26, 2026, will have a maximum temperature of 34.1°C and a minimum temperature of 19.7°C. As for whether it's good for dragons, that's a tough one! Dragons are mythical creatures, so we don't really know their preferred weather conditions. Perhaps a nice warm day is good for sunbathing for a dragon!"
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": "what is the weather like in berlin today is it good for aliens"
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "tool_use",
+          "id": "call_f7t8j4zko",
+          "name": "weather",
+          "input": {
+            "longitude": 13.376471,
+            "latitude": 52.520915,
+            "days": 1
+          }
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "tool_result",
+          "tool_use_id": "call_f7t8j4zko",
+          "name": "weather",
+          "content": "{\"timeZone\":\"Europe/Berlin\",\"forecasts\":[{\"date\":\"2026-06-26\",\"minTemp\":19.7,\"maxTemp\":34.1,\"unit\":\"CELSIUS\"}]}"
+        }
+      ]
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "The weather in Berlin today, June 26, 2026, has a maximum temperature of 34.1°C and a minimum temperature of 19.7°C.\n\nAs for whether it's good for aliens, I can't say! We don't have any information about what kind of weather aliens prefer, or even if they exist."
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": "latest news on AI"
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "I am sorry, but I do not have the ability to access real-time news or current events. My knowledge base has a cut-off date, and I cannot browse the internet for the latest information on AI or any other topic."
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": "latest news on AI"
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "I am sorry, but I do not have the ability to access real-time news or current events. My knowledge base has a cut-off date, and I cannot browse the internet for the latest information on AI or any other topic."
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": "hello"
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "Hello! How can I help you today?"
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": "what is 9 divided by 1 over 9"
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "tool_use",
+          "id": "call_7z65gyfvd",
+          "name": "calculator",
+          "input": {
+            "expression": "9 / (1/9)"
+          }
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "tool_result",
+          "tool_use_id": "call_7z65gyfvd",
+          "name": "calculator",
+          "content": "81"
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": "cool what is 5 plus 5"
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "tool_use",
+          "id": "call_hejfauuu1",
+          "name": "calculator",
+          "input": {
+            "expression": "5 + 5"
+          }
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "tool_result",
+          "tool_use_id": "call_hejfauuu1",
+          "name": "calculator",
+          "content": "10"
+        }
+      ]
+    }
+  ],
+  "updatedAt": "2026-06-27T00:33:22.596Z"
+}

@@ -2,6 +2,7 @@ import {
   mapDomainToolsToGemini,
   mapDomainMessagesToGemini,
   mapGeminiResponseToDomain,
+  mapGeminiError,
 } from './gemini-agent.mapper';
 import {
   AgentToolDefinition,
@@ -127,7 +128,7 @@ describe('GeminiAgentMapper', () => {
       ];
 
       const mapped = mapDomainMessagesToGemini(messages);
-      expect(mapped[0].parts[0].functionResponse).toEqual({
+      expect(mapped[0]?.parts?.[0]?.functionResponse).toEqual({
         name: 'calc',
         response: { result: 4 },
       });
@@ -147,7 +148,7 @@ describe('GeminiAgentMapper', () => {
         ],
       };
 
-      const turn = mapGeminiResponseToDomain(response);
+      const turn = mapGeminiResponseToDomain(response as any);
       expect(turn.stopReason).toBe('end_turn');
       expect(turn.content).toEqual([
         { type: 'text', text: 'Here is the answer.' },
@@ -174,7 +175,7 @@ describe('GeminiAgentMapper', () => {
         ],
       };
 
-      const turn = mapGeminiResponseToDomain(response);
+      const turn = mapGeminiResponseToDomain(response as any);
       expect(turn.stopReason).toBe('tool_use');
       expect(turn.content).toHaveLength(1);
       expect(turn.content[0]).toEqual({
@@ -207,7 +208,7 @@ describe('GeminiAgentMapper', () => {
         ],
       };
 
-      const turn = mapGeminiResponseToDomain(response);
+      const turn = mapGeminiResponseToDomain(response as any);
       expect(turn.stopReason).toBe('tool_use');
       expect(turn.content[0]).toEqual({
         type: 'tool_use',
@@ -215,6 +216,58 @@ describe('GeminiAgentMapper', () => {
         name: 'get_weather',
         input: { location: 'London' },
       });
+    });
+  });
+
+  describe('mapGeminiError', () => {
+    it('should return non-JSON error as-is and preserve its prototype', () => {
+      const { AuthenticationException } = require('../../../../application/exceptions/ai-client.exception');
+      const error = new AuthenticationException('Plain error message', 401);
+      const mapped = mapGeminiError(error);
+
+      expect(mapped).toBe(error);
+      expect(mapped.message).toBe('Plain error message');
+      expect(mapped).toBeInstanceOf(AuthenticationException);
+      expect((mapped as any).errorDetails).toBeUndefined();
+    });
+
+    it('should parse single-level JSON error and mutate message in-place', () => {
+      const rawErrorPayload = {
+        error: {
+          code: 403,
+          message: 'Permission denied',
+          status: 'PERMISSION_DENIED',
+        },
+      };
+      const error = new Error(JSON.stringify(rawErrorPayload));
+      const mapped = mapGeminiError(error);
+
+      expect(mapped).toBe(error);
+      expect(mapped.message).toBe('Permission denied');
+      expect((mapped as any).errorDetails).toEqual(rawErrorPayload);
+    });
+
+    it('should parse double-level stringified JSON error and extract inner message', () => {
+      const innerJson = JSON.stringify({
+        error: {
+          code: 429,
+          message: 'You exceeded your current quota, please check your plan and billing details.',
+          status: 'RESOURCE_EXHAUSTED',
+        },
+      });
+      const rawErrorPayload = {
+        error: {
+          code: 429,
+          message: innerJson,
+          status: 'RESOURCE_EXHAUSTED',
+        },
+      };
+      const error = new Error(JSON.stringify(rawErrorPayload));
+      const mapped = mapGeminiError(error);
+
+      expect(mapped).toBe(error);
+      expect(mapped.message).toBe('You exceeded your current quota, please check your plan and billing details.');
+      expect((mapped as any).errorDetails).toEqual(rawErrorPayload);
     });
   });
 });

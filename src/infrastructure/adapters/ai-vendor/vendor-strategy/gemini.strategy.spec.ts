@@ -52,7 +52,7 @@ describe('GeminiStrategy', () => {
 
   describe('getClient', () => {
     it('should return the GoogleGenAI instance', () => {
-      const client = service.getClient();
+      const client = (service as any).getClient();
       expect(client).toBeDefined();
       expect(client.models).toBeDefined();
     });
@@ -87,19 +87,20 @@ describe('GeminiStrategy', () => {
       };
       mockGenerateContentStream.mockResolvedValue(mockResponseStream);
 
-      const { chunks$, turn$ } = service.createMessage({
+      const { chunks, turnPromise } = service.createMessage({
         maxTokens: 1024,
         tools: [],
         messages: [{ role: 'user', content: 'Hello' }],
       });
 
-      const chunks: string[] = [];
-      const sub = chunks$.subscribe((c) => chunks.push(c));
-      const turn = await turn$;
-      sub.unsubscribe();
+      const chunksResult: string[] = [];
+      for await (const chunk of chunks) {
+        chunksResult.push(chunk);
+      }
+      const turnResult = await turnPromise;
 
-      expect(turn.reply).toBe('Hello response');
-      expect(chunks).toEqual(['Hello response']);
+      expect(turnResult.reply).toBe('Hello response');
+      expect(chunksResult).toEqual(['Hello response']);
       expect(mockGenerateContentStream).toHaveBeenCalledWith({
         model: 'gemini-2.0-flash',
         contents: [{ role: 'user', parts: [{ text: 'Hello' }] }],
@@ -130,20 +131,21 @@ describe('GeminiStrategy', () => {
       };
       mockGenerateContentStream.mockResolvedValue(mockResponseStream);
 
-      const { chunks$, turn$ } = service.createMessage({
+      const { chunks, turnPromise } = service.createMessage({
         maxTokens: 1024,
         system: 'You are a helper.',
         tools: [],
         messages: [{ role: 'user', content: 'Hello' }],
       });
 
-      const chunks: string[] = [];
-      const sub = chunks$.subscribe((c) => chunks.push(c));
-      const turn = await turn$;
-      sub.unsubscribe();
+      const chunksResult: string[] = [];
+      for await (const chunk of chunks) {
+        chunksResult.push(chunk);
+      }
+      const turnResult = await turnPromise;
 
-      expect(turn.reply).toBe('Hello response');
-      expect(chunks).toEqual(['Hello response']);
+      expect(turnResult.reply).toBe('Hello response');
+      expect(chunksResult).toEqual(['Hello response']);
       expect(mockGenerateContentStream).toHaveBeenCalledWith({
         model: 'gemini-2.0-flash',
         contents: [{ role: 'user', parts: [{ text: 'Hello' }] }],
@@ -159,23 +161,23 @@ describe('GeminiStrategy', () => {
       const error = { status: 401, message: 'API key not valid' };
       mockGenerateContentStream.mockRejectedValue(error);
 
-      const { chunks$, turn$ } = service.createMessage({
+      const { chunks, turnPromise } = service.createMessage({
         maxTokens: 1024,
         tools: [],
         messages: [{ role: 'user', content: 'Hello' }],
       });
 
-      const chunks: string[] = [];
-      const sub = chunks$.subscribe({
-        next: (c) => chunks.push(c),
-        error: () => {},
-      });
+      const consumeChunks = async () => {
+        for await (const _ of chunks) {}
+      };
 
-      await expect(turn$).rejects.toThrow(AuthenticationException);
-      sub.unsubscribe();
+      await Promise.all([
+        expect(turnPromise).rejects.toThrow(AuthenticationException),
+        expect(consumeChunks()).rejects.toThrow(AuthenticationException),
+      ]);
     });
 
-    it('should return observable and stream text chunks', async () => {
+    it('should return async iterable and stream text chunks', async () => {
       const mockResponseStream = {
         response: Promise.resolve({
           candidates: [
@@ -196,24 +198,20 @@ describe('GeminiStrategy', () => {
 
       mockGenerateContentStream.mockResolvedValue(mockResponseStream);
 
-      const { chunks$, turn$ } = service.createMessage({
+      const { chunks, turnPromise } = service.createMessage({
         maxTokens: 100,
         tools: [],
         messages: [{ role: 'user', content: 'hello' }],
       });
 
-      const chunks: string[] = [];
-      await new Promise<void>((resolve, reject) => {
-        chunks$.subscribe({
-          next: (val) => chunks.push(val),
-          error: reject,
-          complete: resolve,
-        });
-      });
+      const chunksResult: string[] = [];
+      for await (const val of chunks) {
+        chunksResult.push(val);
+      }
 
-      const turn = await turn$;
-      expect(chunks).toEqual(['streamed ', 'response']);
-      expect(turn.reply).toBe('streamed response');
+      const turnResult = await turnPromise;
+      expect(chunksResult).toEqual(['streamed ', 'response']);
+      expect(turnResult.reply).toBe('streamed response');
     });
   });
 });

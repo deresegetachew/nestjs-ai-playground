@@ -12,6 +12,8 @@ export interface PromptInputProps {
   onSubmit: (val: string) => void;
   disabled?: boolean;
   placeholder?: string;
+  onUpArrow?: () => void;
+  onDownArrow?: () => void;
 }
 
 export const PromptInput: React.FC<PromptInputProps> = ({
@@ -23,6 +25,8 @@ export const PromptInput: React.FC<PromptInputProps> = ({
   onSubmit,
   disabled = false,
   placeholder = 'Type a message...',
+  onUpArrow,
+  onDownArrow,
 }) => {
   const { Box, Text } = ink;
   const isAgent = mode === 'AGENT_SESSION';
@@ -50,6 +54,8 @@ export const PromptInput: React.FC<PromptInputProps> = ({
         borderColor={borderColor}
         placeholder={placeholder}
         disabled={disabled}
+        onUpArrow={onUpArrow}
+        onDownArrow={onDownArrow}
       />
       {!disabled && (
         <Box marginLeft={1} marginTop={0}>

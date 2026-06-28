@@ -45,6 +45,14 @@ jest.mock('react', () => {
       }
       return [mockStates[currentIndex] as T, mockSetStates[currentIndex]];
     },
+    useRef: <T>(initialValue: T): { current: T } => {
+      const currentIndex = stateIndex;
+      stateIndex++;
+      if (mockStates[currentIndex] === undefined) {
+        mockStates[currentIndex] = { current: initialValue };
+      }
+      return mockStates[currentIndex] as { current: T };
+    },
     useEffect: (fn: () => void | (() => void)): void => {
       const cleanup = fn();
       if (typeof cleanup === 'function') {
@@ -88,5 +96,55 @@ jest.mock('ink-spinner', () => {
   return {
     __esModule: true,
     default: (): null => null,
+  };
+});
+
+// Global OpenTelemetry Mocks for Jest Isolation
+jest.mock('@opentelemetry/sdk-node', () => {
+  return {
+    NodeSDK: jest.fn().mockImplementation(() => {
+      return {
+        start: jest.fn(),
+        shutdown: jest.fn(),
+      };
+    }),
+  };
+});
+
+jest.mock('@opentelemetry/api-logs', () => {
+  const original = jest.requireActual('@opentelemetry/api-logs');
+  return {
+    ...original,
+    logs: {
+      setGlobalLoggerProvider: jest.fn(),
+      getLogger: jest.fn().mockImplementation(() => {
+        return {
+          emit: jest.fn(),
+        };
+      }),
+    },
+  };
+});
+
+jest.mock('@opentelemetry/sdk-logs', () => {
+  return {
+    SimpleLogRecordProcessor: jest.fn(),
+    LoggerProvider: jest.fn().mockImplementation(() => {
+      return {
+        addLogRecordProcessor: jest.fn(),
+      };
+    }),
+  };
+});
+
+jest.mock('@opentelemetry/exporter-logs-otlp-http', () => {
+  return {
+    OTLPLogExporter: jest.fn(),
+  };
+});
+
+jest.mock('@opentelemetry/auto-instrumentations-node', () => {
+  return {
+    getNodeAutoInstrumentations: jest.fn().mockReturnValue([]),
   };
 });

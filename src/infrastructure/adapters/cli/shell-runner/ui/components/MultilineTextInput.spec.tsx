@@ -1,7 +1,7 @@
 import React from 'react';
 import * as ink from 'ink';
 import { getCoords, getIndex, MultilineTextInput } from './MultilineTextInput';
-import { reactMockControl } from '../react-mock-setup';
+import { reactMockControl } from '../../../../../../test-setup';
 
 describe('MultilineTextInput Coordinates Helpers', () => {
   describe('getCoords', () => {

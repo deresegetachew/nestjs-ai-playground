@@ -13,5 +13,46 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+  # OpenTelemetry Collector to route open-standard OTLP traces and logs
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    restart: always
+    volumes:
+      - ./otel-config.yaml:/etc/otelcol-contrib/config.yaml
+    ports:
+      - "4317:4317" # OTLP gRPC receiver port
+      - "4318:4318" # OTLP HTTP receiver port
+    depends_on:
+      - loki
+
+  # Grafana Loki to store and query the log strings
+  loki:
+    image: grafana/loki:latest
+    restart: always
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./grafana/loki-config.yaml:/etc/loki/loki-config.yaml
+      - loki_data:/loki
+    command: -config.file=/etc/loki/loki-config.yaml
+
+  # Grafana Dashboard UI
+  grafana:
+    image: grafana/grafana:latest
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
+      - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
+      - ./grafana/provisioning/alerting:/etc/grafana/provisioning/alerting
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - loki
+
 volumes:
   postgres_data:
+  loki_data:
+  grafana_data:

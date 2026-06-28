@@ -84,7 +84,10 @@ export function mapDomainMessagesToGemini(messages: AgentMessage[]): Content[] {
 /**
  * Maps a list of Gemini Parts directly to a domain AgentTurn.
  */
-export function mapGeminiPartsToTurn(parts: Part[]): AgentTurn {
+export function mapGeminiPartsToTurn(
+  parts: Part[],
+  usage?: { inputTokens: number; outputTokens: number },
+): AgentTurn {
   const contentBlocks: AgentContentBlock[] = [];
 
   for (const part of parts) {
@@ -122,7 +125,7 @@ export function mapGeminiPartsToTurn(parts: Part[]): AgentTurn {
   }
 
   const hasToolUse = contentBlocks.some((b) => b.type === 'tool_use');
-  return new AgentTurn(hasToolUse ? 'tool_use' : 'end_turn', contentBlocks);
+  return new AgentTurn(hasToolUse ? 'tool_use' : 'end_turn', contentBlocks, usage);
 }
 
 /**
@@ -132,7 +135,11 @@ export function mapGeminiResponseToDomain(
   response: GenerateContentResponse,
 ): AgentTurn {
   const parts = response.candidates?.[0]?.content?.parts || [];
-  const turn = mapGeminiPartsToTurn(parts);
+  const usage = response.usageMetadata ? {
+    inputTokens: response.usageMetadata.promptTokenCount ?? 0,
+    outputTokens: response.usageMetadata.candidatesTokenCount ?? 0,
+  } : undefined;
+  const turn = mapGeminiPartsToTurn(parts, usage);
 
   // Fallback if no parts parsed but text field has content
   if (turn.content.length === 0 && response.text) {
@@ -141,8 +148,34 @@ export function mapGeminiResponseToDomain(
         type: 'text',
         text: response.text,
       },
-    ]);
+    ], usage);
   }
 
   return turn;
+}
+
+function tryParse(str: string): any {
+  try {
+    return JSON.parse(str);
+  } catch {
+    return null;
+  }
+}
+
+export function mapGeminiError(error: any): Error {
+  const parsed = tryParse(error?.message);
+  if (parsed?.error) {
+    const innerMessage = parsed.error.message;
+    const innerParsed = typeof innerMessage === 'string' ? tryParse(innerMessage) : null;
+    const cleanMsg = innerParsed?.error?.message || innerMessage || error.message;
+
+    try {
+      error.message = cleanMsg;
+    } catch {
+      Object.defineProperty(error, 'message', { value: cleanMsg, writable: true, configurable: true });
+    }
+    error.errorDetails = parsed;
+  }
+
+  return error;
 }

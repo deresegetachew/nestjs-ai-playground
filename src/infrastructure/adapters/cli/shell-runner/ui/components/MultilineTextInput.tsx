@@ -37,6 +37,8 @@ export interface MultilineTextInputProps {
   borderColor?: string;
   placeholder?: string;
   disabled?: boolean;
+  onUpArrow?: () => void;
+  onDownArrow?: () => void;
 }
 
 export const MultilineTextInput: React.FC<MultilineTextInputProps> = ({
@@ -47,16 +49,27 @@ export const MultilineTextInput: React.FC<MultilineTextInputProps> = ({
   borderColor = 'cyan',
   placeholder = '',
   disabled = false,
+  onUpArrow,
+  onDownArrow,
 }) => {
   const { Box, Text, useInput } = ink;
   const [cursorIndex, setCursorIndex] = useState(0);
+  const lastInternalValueRef = React.useRef(value);
 
   // Sync cursor index if the value is cleared or changed externally
   useEffect(() => {
-    if (cursorIndex > value.length) {
+    if (value !== lastInternalValueRef.current) {
+      setCursorIndex(value.length);
+      lastInternalValueRef.current = value;
+    } else if (cursorIndex > value.length) {
       setCursorIndex(value.length);
     }
   }, [value]);
+
+  const handleValueChange = (newValue: string) => {
+    lastInternalValueRef.current = newValue;
+    onChange(newValue);
+  };
 
   useInput((input, key) => {
     // 1. Exit/Interrupt handling (do not block Ctrl+C)
@@ -74,7 +87,7 @@ export const MultilineTextInput: React.FC<MultilineTextInputProps> = ({
         const left = value.slice(0, cursorIndex);
         const right = value.slice(cursorIndex);
         const newValue = left + '\n' + right;
-        onChange(newValue);
+        handleValueChange(newValue);
         setCursorIndex(cursorIndex + 1);
       } else {
         onSubmit(value);
@@ -89,7 +102,7 @@ export const MultilineTextInput: React.FC<MultilineTextInputProps> = ({
         const left = value.slice(0, cursorIndex - 1);
         const right = value.slice(cursorIndex);
         const newValue = left + right;
-        onChange(newValue);
+        handleValueChange(newValue);
         setCursorIndex(cursorIndex - 1);
       }
       return;
@@ -101,7 +114,7 @@ export const MultilineTextInput: React.FC<MultilineTextInputProps> = ({
         const left = value.slice(0, cursorIndex);
         const right = value.slice(cursorIndex + 1);
         const newValue = left + right;
-        onChange(newValue);
+        handleValueChange(newValue);
       }
       return;
     }
@@ -123,6 +136,8 @@ export const MultilineTextInput: React.FC<MultilineTextInputProps> = ({
         const newCol = Math.min(col, prevLineLen);
         const newIndex = getIndex(lines, prevLine, newCol);
         setCursorIndex(newIndex);
+      } else if (onUpArrow) {
+        onUpArrow();
       }
       return;
     }
@@ -134,6 +149,8 @@ export const MultilineTextInput: React.FC<MultilineTextInputProps> = ({
         const newCol = Math.min(col, nextLineLen);
         const newIndex = getIndex(lines, nextLine, newCol);
         setCursorIndex(newIndex);
+      } else if (onDownArrow) {
+        onDownArrow();
       }
       return;
     }
@@ -165,7 +182,7 @@ export const MultilineTextInput: React.FC<MultilineTextInputProps> = ({
       const left = value.slice(0, cursorIndex);
       const right = value.slice(cursorIndex);
       const newValue = left + input + right;
-      onChange(newValue);
+      handleValueChange(newValue);
       setCursorIndex(cursorIndex + input.length);
     }
   });

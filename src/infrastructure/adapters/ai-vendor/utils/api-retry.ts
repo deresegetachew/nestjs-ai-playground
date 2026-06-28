@@ -6,6 +6,7 @@ import {
   APIOverloadedException,
   ServerException,
 } from '../../../../application/exceptions/ai-client.exception';
+import { loadConfig } from '../../../../config/load-config';
 
 interface ErrorDetails {
   status: number | null;
@@ -14,14 +15,16 @@ interface ErrorDetails {
 }
 
 type Decision =
-  | { type: 'throw'; error: Error }
-  | { type: 'retry'; delay: number; logMessage: string }
+  | { type: 'throw'; error: Error; exhausted?: boolean }
+  | { type: 'retry'; delay: number; logMessage: string; httpStatus: number | null }
   | { type: 'propagate' };
 
 type HandlerRule = (
   details: ErrorDetails,
   attempt: number,
   maxRetries: number,
+  initialDelayMs: number,
+  overloadDelayMs: number,
 ) => Decision;
 
 /**
@@ -82,6 +85,14 @@ function parseErrorDetails(err: unknown): ErrorDetails {
   return { status, message, code };
 }
 
+/**
+ * Applies random jitter variation to a delay to prevent thundering herd requests.
+ */
+function applyJitter(delay: number): number {
+  const jitter = Math.floor(Math.random() * Math.min(500, delay * 0.2));
+  return delay + jitter;
+}
+
 // 1. Immediate Failures Rule (400, 401, 403)
 const immediateFailuresRule: HandlerRule = (details) => {
   if (details.status === 400) {
@@ -103,18 +114,20 @@ const immediateFailuresRule: HandlerRule = (details) => {
 };
 
 // 2. Rate Limit Rule (429)
-const rateLimitRule: HandlerRule = (details, attempt, maxRetries) => {
+const rateLimitRule: HandlerRule = (details, attempt, maxRetries, initialDelayMs) => {
   if (details.status === 429) {
     if (attempt >= maxRetries) {
       return {
         type: 'throw',
         error: new RateLimitException(details.message),
+        exhausted: true,
       };
     }
-    const delay = Math.pow(2, attempt) * 1000;
+    const delay = applyJitter(Math.pow(2, attempt) * initialDelayMs);
     return {
       type: 'retry',
       delay,
+      httpStatus: 429,
       logMessage: `Rate limited (429). Retrying in ${delay}ms... (Attempt ${attempt + 1}/${maxRetries})`,
     };
   }
@@ -122,18 +135,20 @@ const rateLimitRule: HandlerRule = (details, attempt, maxRetries) => {
 };
 
 // 3. API Overloaded Rule (529)
-const apiOverloadedRule: HandlerRule = (details, attempt, maxRetries) => {
+const apiOverloadedRule: HandlerRule = (details, attempt, maxRetries, initialDelayMs, overloadDelayMs) => {
   if (details.status === 529) {
     if (attempt >= maxRetries) {
       return {
         type: 'throw',
         error: new APIOverloadedException(details.message),
+        exhausted: true,
       };
     }
-    const delay = 5000;
+    const delay = applyJitter(overloadDelayMs);
     return {
       type: 'retry',
       delay,
+      httpStatus: 529,
       logMessage: `API overloaded (529). Retrying in ${delay}ms... (Attempt ${attempt + 1}/${maxRetries})`,
     };
   }
@@ -141,18 +156,20 @@ const apiOverloadedRule: HandlerRule = (details, attempt, maxRetries) => {
 };
 
 // 4. Server Error Rule (>= 500)
-const serverErrorRule: HandlerRule = (details, attempt, maxRetries) => {
+const serverErrorRule: HandlerRule = (details, attempt, maxRetries, initialDelayMs) => {
   if (details.status && details.status >= 500) {
     if (attempt >= maxRetries) {
       return {
         type: 'throw',
         error: new ServerException(details.message, details.status),
+        exhausted: true,
       };
     }
-    const delay = Math.pow(2, attempt) * 1000;
+    const delay = applyJitter(Math.pow(2, attempt) * initialDelayMs);
     return {
       type: 'retry',
       delay,
+      httpStatus: details.status,
       logMessage: `Server error (${details.status}). Retrying in ${delay}ms... (Attempt ${attempt + 1}/${maxRetries})`,
     };
   }
@@ -160,7 +177,7 @@ const serverErrorRule: HandlerRule = (details, attempt, maxRetries) => {
 };
 
 // 5. Transient Network Error Rule
-const transientNetworkRule: HandlerRule = (details, attempt, maxRetries) => {
+const transientNetworkRule: HandlerRule = (details, attempt, maxRetries, initialDelayMs) => {
   const isTransient =
     details.code === 'ECONNRESET' ||
     details.code === 'ETIMEDOUT' ||
@@ -171,10 +188,11 @@ const transientNetworkRule: HandlerRule = (details, attempt, maxRetries) => {
     if (attempt >= maxRetries) {
       return { type: 'propagate' };
     }
-    const delay = Math.pow(2, attempt) * 1000;
+    const delay = applyJitter(Math.pow(2, attempt) * initialDelayMs);
     return {
       type: 'retry',
       delay,
+      httpStatus: null,
       logMessage: `Transient connection error (${details.code || 'network'}). Retrying in ${delay}ms... (Attempt ${attempt + 1}/${maxRetries})`,
     };
   }
@@ -197,7 +215,21 @@ export async function safeInvoke<T>(
   fn: () => Promise<T>,
   logger: Logger,
 ): Promise<T> {
-  const MAX_RETRIES = 3;
+  let maxRetries = 3;
+  let initialDelayMs = 1000;
+  let overloadDelayMs = 5000;
+
+  try {
+    const config = loadConfig();
+    if (config.ai?.retry) {
+      maxRetries = config.ai.retry.maxRetries ?? 3;
+      initialDelayMs = config.ai.retry.initialDelayMs ?? 1000;
+      overloadDelayMs = config.ai.retry.overloadDelayMs ?? 5000;
+    }
+  } catch {
+    // Safe fallback if config loading fails (e.g. in tests)
+  }
+
   let attempt = 0;
 
   while (true) {
@@ -209,7 +241,7 @@ export async function safeInvoke<T>(
       // Evaluate rules sequentially
       let decision: Decision = { type: 'propagate' };
       for (const rule of RULES) {
-        const result = rule(details, attempt, MAX_RETRIES);
+        const result = rule(details, attempt, maxRetries, initialDelayMs, overloadDelayMs);
         if (result.type !== 'propagate') {
           decision = result;
           break;
@@ -217,11 +249,27 @@ export async function safeInvoke<T>(
       }
 
       if (decision.type === 'throw') {
+        if (decision.exhausted) {
+          logger.error({
+            event: 'api_retry_exhausted',
+            httpStatus: details.status,
+            maxRetries,
+            attempt,
+            reason: details.message,
+          });
+        }
         throw decision.error;
       }
 
       if (decision.type === 'retry') {
-        logger.warn(decision.logMessage);
+        logger.warn({
+          event: 'api_retry',
+          attempt: attempt + 1,
+          maxRetries,
+          httpStatus: (decision as any).httpStatus ?? details.status,
+          delayMs: decision.delay,
+          reason: decision.logMessage,
+        });
         await new Promise((r) => setTimeout(r, decision.delay));
         attempt++;
         continue;

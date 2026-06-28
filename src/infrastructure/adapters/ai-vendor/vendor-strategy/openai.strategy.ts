@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import OpenAI from 'openai';
-import { Observable } from 'rxjs';
+
 import { AppConfig } from '../../../../config/config.schema';
 import { AIModel } from '../../../../domain/models/ai-model.value-object';
 import { AIVendor } from '../../../../domain/models/ai-vendor.value-object';
@@ -9,6 +9,7 @@ import { AIClient } from '../../../../application/ports/ai-client.port';
 import {
   AgentTurn,
   IAgentParams,
+  AgentMessage,
 } from '../../../../application/ports/agent-types';
 
 const OPENAI_MODELS = [
@@ -43,7 +44,7 @@ const OPENAI_MODELS = [
 export class OpenAiStrategy implements AIClient {
   private readonly logger = new Logger(OpenAiStrategy.name);
   private client: OpenAI;
-  private defaultModel: string;
+  readonly defaultModel: string;
 
   constructor(private readonly configService: ConfigService<AppConfig>) {
     const openaiConfig = this.configService.get('openai', { infer: true });
@@ -88,19 +89,21 @@ export class OpenAiStrategy implements AIClient {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     params: IAgentParams,
   ): {
-    chunks$: Observable<string>;
-    turn$: Promise<AgentTurn>;
+    chunks: AsyncIterable<string>;
+    turnPromise: Promise<AgentTurn>;
   } {
-    const chunks$ = new Observable<string>((subscriber) => {
-      subscriber.error(
-        new Error(
-          'OpenAI Agent support (createMessage) is not yet implemented.',
-        ),
+    async function* emptyGenerator(): AsyncGenerator<string, void, unknown> {
+      throw new Error(
+        'OpenAI Agent support (createMessage) is not yet implemented.',
       );
-    });
-    const turn$ = Promise.reject(
+    }
+    const turnPromise = Promise.reject(
       new Error('OpenAI Agent support (createMessage) is not yet implemented.'),
     );
-    return { chunks$, turn$ };
+    return { chunks: emptyGenerator(), turnPromise };
+  }
+
+  async countTokens(messages: AgentMessage[], model?: string): Promise<number> {
+    return 0;
   }
 }

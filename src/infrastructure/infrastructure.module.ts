@@ -1,10 +1,19 @@
-import { Module } from '@nestjs/common';
+import { Global, Module } from '@nestjs/common';
 import { AIVendorModule } from './adapters/ai-vendor/ai-vendor.module';
 import { CliModule } from './adapters/cli/cli.module';
 import { ToolsModule } from './adapters/tools/tools.module';
+import { FileConversationRepository } from './adapters/persistence/file-conversation.repository';
+import { CONVERSATION_REPOSITORY } from '../domain/ports/conversation-repository.port';
 
+@Global()
 @Module({
   imports: [AIVendorModule, CliModule, ToolsModule],
-  exports: [AIVendorModule, CliModule, ToolsModule],
+  providers: [
+    {
+      provide: CONVERSATION_REPOSITORY,
+      useClass: FileConversationRepository,
+    },
+  ],
+  exports: [AIVendorModule, CliModule, ToolsModule, CONVERSATION_REPOSITORY],
 })
 export class InfrastructureModule {}

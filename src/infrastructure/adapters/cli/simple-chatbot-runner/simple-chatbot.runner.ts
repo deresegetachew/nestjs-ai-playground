@@ -1,11 +1,10 @@
 import { Command, CommandRunner } from 'nest-commander';
 import { CommandBus } from '@nestjs/cqrs';
-import { Observable } from 'rxjs';
+
 import { AskSimpleChatbotCommand } from '../../../../application/commands/ask-simple-chatbot.command';
 import { AgentStreamChunk } from '../../../../application/ports/agent-types';
 
 import pc from 'picocolors';
-import ora from 'ora';
 import {
   RateLimitException,
   AuthenticationException,
@@ -49,6 +48,7 @@ export class SimpleChatbotRunner extends CommandRunner {
   }
 
   async run(passedParams: string[]): Promise<void> {
+    const ora = (await import('ora')).default;
     const message = passedParams.join(' ');
     const isShell = process.env.CLI_SHELL === 'true';
 
@@ -68,76 +68,98 @@ export class SimpleChatbotRunner extends CommandRunner {
     }).start();
 
     try {
-      const responseStream$ = await this.commandBus.execute<
+      const conversationId = `oneshot-${Math.random().toString(36).substring(2, 10)}`;
+      const responseStream = await this.commandBus.execute<
         AskSimpleChatbotCommand,
-        Observable<AgentStreamChunk>
-      >(new AskSimpleChatbotCommand(message));
+        AsyncIterable<AgentStreamChunk>
+      >(new AskSimpleChatbotCommand(message, conversationId));
 
-      let currentTurnText = '';
+      let hasPrintedThoughtPrefix = false;
+      let hasPrintedTextPrefix = false;
 
-      await new Promise<void>((resolve, reject) => {
-        responseStream$.subscribe({
-          next: (chunk) => {
-            switch (chunk.type) {
-              case 'text':
-                currentTurnText += chunk.text;
-                break;
-              case 'turn_completed':
-                spinner.stop();
-                if (chunk.isEnd) {
-                  if (currentTurnText.trim()) {
-                    process.stdout.write(
-                      `${agentPromptPrefix}${pc.green(pc.bold('[Final Answer]:'))} ${currentTurnText}\n`,
-                    );
-                  }
-                } else {
-                  if (currentTurnText.trim()) {
-                    process.stdout.write(
-                      `${agentPromptPrefix}${pc.cyan(pc.bold('[Thought]:'))} ${currentTurnText}\n`,
-                    );
-                  }
-                  currentTurnText = '';
-                  spinner.start(
-                    `🤖 ${pc.green(pc.bold('simple-chatbot'))} ${pc.dim('›')} thinking ...`,
-                  );
-                }
-                break;
-              case 'tool_use':
-                spinner.stop();
-                process.stdout.write(
-                  `${agentPromptPrefix}${pc.yellow(pc.bold('[Calling Tool]:'))} ${chunk.name} with ${JSON.stringify(chunk.input)}\n`,
-                );
-                break;
-              case 'observation':
-                spinner.stop();
-                process.stdout.write(
-                  `${agentPromptPrefix}${pc.gray(pc.bold('[Observation]:'))} ${chunk.content}\n`,
-                );
-                break;
-              case 'warning':
-                spinner.stop();
-                process.stdout.write(
-                  `${agentPromptPrefix}${pc.red(pc.bold('[Warning]:'))} ${chunk.text}\n`,
-                );
-                break;
-              case 'error':
-                spinner.stop();
-                process.stdout.write(
-                  `${agentPromptPrefix}${pc.red(pc.bold('[Error]:'))} ${chunk.text}\n`,
-                );
-                break;
+      for await (const chunk of responseStream) {
+        switch (chunk.type) {
+          case 'thought':
+            if (spinner.isSpinning) {
+              spinner.stop();
             }
-          },
-          error: (err: unknown) => {
-            spinner.stop();
-            reject(err instanceof Error ? err : new Error(String(err)));
-          },
-          complete: () => {
-            spinner.stop();
-            resolve();
-          },
-        });
-      });
+            if (!hasPrintedThoughtPrefix) {
+              process.stdout.write(`${agentPromptPrefix}${pc.cyan(pc.bold('[Thought]:'))} `);
+              hasPrintedThoughtPrefix = true;
+            }
+            process.stdout.write(chunk.text);
+            break;
+
+          case 'text':
+            if (spinner.isSpinning) {
+              spinner.stop();
+            }
+            if (!hasPrintedTextPrefix) {
+              if (hasPrintedThoughtPrefix) {
+                process.stdout.write('\n');
+              }
+              process.stdout.write(`${agentPromptPrefix}${pc.green(pc.bold('[Final Answer]:'))} `);
+              hasPrintedTextPrefix = true;
+            }
+            process.stdout.write(chunk.text);
+            break;
+
+          case 'turn_completed':
+            if (spinner.isSpinning) {
+              spinner.stop();
+            }
+            if (hasPrintedThoughtPrefix || hasPrintedTextPrefix) {
+              process.stdout.write('\n');
+            }
+
+            hasPrintedThoughtPrefix = false;
+            hasPrintedTextPrefix = false;
+
+            if (!chunk.isEnd) {
+              spinner.start(
+                `🤖 ${pc.green(pc.bold('simple-chatbot'))} ${pc.dim('›')} thinking ...`,
+              );
+            }
+            break;
+
+          case 'tool_use':
+            if (spinner.isSpinning) {
+              spinner.stop();
+            }
+            process.stdout.write(
+              `${agentPromptPrefix}${pc.yellow(pc.bold('[Calling Tool]:'))} ${chunk.name} with ${JSON.stringify(chunk.input)}\n`,
+            );
+            break;
+
+          case 'observation':
+            if (spinner.isSpinning) {
+              spinner.stop();
+            }
+            process.stdout.write(
+              `${agentPromptPrefix}${pc.gray(pc.bold('[Observation]:'))} ${chunk.content}\n`,
+            );
+            break;
+
+          case 'warning':
+            if (spinner.isSpinning) {
+              spinner.stop();
+            }
+            process.stdout.write(
+              `${agentPromptPrefix}${pc.red(pc.bold('[Warning]:'))} ${chunk.text}\n`,
+            );
+            break;
+
+          case 'error':
+            if (spinner.isSpinning) {
+              spinner.stop();
+            }
+            process.stdout.write(
+              `${agentPromptPrefix}${pc.red(pc.bold('[Error]:'))} ${chunk.text}\n`,
+            );
+            break;
+        }
+      }
+      spinner.stop();
     } catch (err: unknown) {
       spinner.stop();
       const friendlyMsg = getFriendlyErrorMessage(err);

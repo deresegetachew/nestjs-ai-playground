@@ -1,0 +1,288 @@
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: Agent Observability Alerts
+    folder: AI Playground
+    interval: 1m
+    rules:
+
+      # ─────────────────────────────────────────────────────────────
+      # CRITICAL: More than 5 errors in the last 5 minutes
+      # ─────────────────────────────────────────────────────────────
+      - uid: agent-high-error-rate
+        title: "Agent High Error Rate"
+        condition: C
+        data:
+          - refId: A
+            datasourceUid: Loki
+            model:
+              editorMode: code
+              expr: 'sum(count_over_time({service_name="nestjs-ai-playground"} | json | level="ERROR" [5m]))'
+              queryType: range
+              maxDataPoints: 43200
+              intervalMs: 60000
+          - refId: C
+            datasourceUid: "-100"
+            model:
+              type: classic_conditions
+              conditions:
+                - evaluator:
+                    params: [5]
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params: [A]
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+        for: 1m
+        annotations:
+          summary: "High agent error rate detected"
+          description: "More than 5 ERROR-level log lines in the last 5 minutes. Check the Log Console Stream for details."
+        labels:
+          severity: critical
+        noDataState: NoData
+        execErrState: Error
+
+      # ─────────────────────────────────────────────────────────────
+      # WARNING: p95 run latency exceeds 15 seconds
+      # ─────────────────────────────────────────────────────────────
+      - uid: agent-high-p95-latency
+        title: "Agent High p95 Latency"
+        condition: C
+        data:
+          - refId: A
+            datasourceUid: Loki
+            model:
+              editorMode: code
+              expr: 'avg(quantile_over_time(0.95, {service_name="nestjs-ai-playground"} | json | event="run_complete" | unwrap totalLatencyMs [5m]))'
+              queryType: range
+              maxDataPoints: 43200
+              intervalMs: 60000
+          - refId: C
+            datasourceUid: "-100"
+            model:
+              type: classic_conditions
+              conditions:
+                - evaluator:
+                    params: [15000]
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params: [A]
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+        for: 2m
+        annotations:
+          summary: "Agent p95 latency is above SLA"
+          description: "The 95th percentile of run completion latency has exceeded 15 seconds over the last 5 minutes."
+        labels:
+          severity: warning
+        noDataState: NoData
+        execErrState: Error
+
+      # ─────────────────────────────────────────────────────────────
+      # WARNING: No agent runs in the last 10 minutes (dead agent)
+      # ─────────────────────────────────────────────────────────────
+      - uid: agent-no-runs-detected
+        title: "Agent — No Runs Detected"
+        condition: C
+        data:
+          - refId: A
+            datasourceUid: Loki
+            model:
+              editorMode: code
+              expr: 'sum(count_over_time({service_name="nestjs-ai-playground"} | json | event="run_start" [10m]))'
+              queryType: range
+              maxDataPoints: 43200
+              intervalMs: 60000
+          - refId: C
+            datasourceUid: "-100"
+            model:
+              type: classic_conditions
+              conditions:
+                - evaluator:
+                    params: [1]
+                    type: lt
+                  operator:
+                    type: and
+                  query:
+                    params: [A]
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+        for: 10m
+        annotations:
+          summary: "No agent runs detected"
+          description: "No run_start events have been logged in the last 10 minutes. The agent may be down or misconfigured."
+        labels:
+          severity: warning
+        noDataState: Alerting
+        execErrState: Error
+
+      # ─────────────────────────────────────────────────────────────
+      # WARNING: More than 2 loop warnings in the last 5 minutes
+      # ─────────────────────────────────────────────────────────────
+      - uid: agent-loop-warning-spike
+        title: "Agent Loop Warning Spike"
+        condition: C
+        data:
+          - refId: A
+            datasourceUid: Loki
+            model:
+              editorMode: code
+              expr: 'sum(count_over_time({service_name="nestjs-ai-playground"} | json | event="loop_warning" [5m]))'
+              queryType: range
+              maxDataPoints: 43200
+              intervalMs: 60000
+          - refId: C
+            datasourceUid: "-100"
+            model:
+              type: classic_conditions
+              conditions:
+                - evaluator:
+                    params: [2]
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params: [A]
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+        for: 0m
+        annotations:
+          summary: "Agent loop detection spike"
+          description: "More than 2 loop_warning events in the last 5 minutes. An agent may be stuck in a repetitive tool-call cycle."
+        labels:
+          severity: warning
+        noDataState: NoData
+        execErrState: Error
+
+      # ─────────────────────────────────────────────────────────────
+      # WARNING: Tool timeout spike — > 3 tool timeouts in 5 minutes
+      # ─────────────────────────────────────────────────────────────
+      - uid: agent-tool-timeout-spike
+        title: "Agent Tool Timeout Spike"
+        condition: C
+        data:
+          - refId: A
+            datasourceUid: Loki
+            model:
+              editorMode: code
+              expr: 'sum(count_over_time({service_name="nestjs-ai-playground"} | json | event="tool_result" | success="false" | errorType="timeout" [5m]))'
+              queryType: range
+              maxDataPoints: 43200
+              intervalMs: 60000
+          - refId: C
+            datasourceUid: "-100"
+            model:
+              type: classic_conditions
+              conditions:
+                - evaluator:
+                    params: [3]
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params: [A]
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+        for: 2m
+        annotations:
+          summary: "Tool timeout spike detected"
+          description: "More than 3 tool timeouts in the last 5 minutes. Check tool latency panels — a downstream service may be slow or unreachable."
+        labels:
+          severity: warning
+        noDataState: NoData
+        execErrState: Error
+
+      # ─────────────────────────────────────────────────────────────
+      # WARNING: max_turns_exceeded rate — agent can't finish tasks
+      # ─────────────────────────────────────────────────────────────
+      - uid: agent-max-turns-exceeded-rate
+        title: "Agent Max Turns Exceeded Rate"
+        condition: C
+        data:
+          - refId: A
+            datasourceUid: Loki
+            model:
+              editorMode: code
+              expr: 'sum(count_over_time({service_name="nestjs-ai-playground"} | json | event="run_complete" | status="max_turns_exceeded" [10m]))'
+              queryType: range
+              maxDataPoints: 43200
+              intervalMs: 60000
+          - refId: C
+            datasourceUid: "-100"
+            model:
+              type: classic_conditions
+              conditions:
+                - evaluator:
+                    params: [2]
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params: [A]
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+        for: 0m
+        annotations:
+          summary: "Agent repeatedly hitting max turn limit"
+          description: "More than 2 runs hit max_turns_exceeded in the last 10 minutes. The agent may be stuck or the task complexity exceeds configured maxTurns."
+        labels:
+          severity: warning
+        noDataState: NoData
+        execErrState: Error
+
+      # ─────────────────────────────────────────────────────────────
+      # CRITICAL: API retry exhausted — vendor API is down
+      # ─────────────────────────────────────────────────────────────
+      - uid: agent-api-retry-exhausted
+        title: "Agent API Retry Exhausted"
+        condition: C
+        data:
+          - refId: A
+            datasourceUid: Loki
+            model:
+              editorMode: code
+              expr: 'sum(count_over_time({service_name="nestjs-ai-playground"} | json | event="api_retry_exhausted" [5m]))'
+              queryType: range
+              maxDataPoints: 43200
+              intervalMs: 60000
+          - refId: C
+            datasourceUid: "-100"
+            model:
+              type: classic_conditions
+              conditions:
+                - evaluator:
+                    params: [0]
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params: [A]
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+        for: 0m
+        annotations:
+          summary: "API retries exhausted — vendor API may be down"
+          description: "An api_retry_exhausted event was logged. All retry attempts failed. Check the Gemini/OpenAI API status and your rate limits."
+        labels:
+          severity: critical
+        noDataState: NoData
+        execErrState: Error
