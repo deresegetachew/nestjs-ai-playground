@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { z } from 'zod';
-import { Tool } from '../../../application/ports/tool.interface';
-import { AppConfig } from '../../../config/config.schema';
-import { BaseHttpTool } from './base-http.tool';
+import { Tool } from '../../../../application/ports/tool.interface';
+import { AppConfig } from '../../../../config/config.schema';
+import { BaseHttpTool } from '../base-http.tool';
 
 const WeatherInputSchema = z.object({
   latitude: z
@@ -82,6 +82,7 @@ export class WeatherTool extends BaseHttpTool implements Tool<WeatherInput, Weat
   readonly description =
     'Get the daily weather forecast for a location (latitude, longitude) for a specified number of days. ' +
     'Returns forecast summaries with temperatures and weather conditions.';
+  readonly version = '1';
   readonly schema = WeatherInputSchema;
 
   constructor(private readonly configService: ConfigService<AppConfig>) {

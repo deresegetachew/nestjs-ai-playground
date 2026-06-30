@@ -1,7 +1,8 @@
+import { z } from 'zod';
 import { WeatherTool } from './weather.tool';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
-import { AppConfig } from '../../../config/config.schema';
+import { AppConfig } from '../../../../config/config.schema';
 
 const mockAxiosInstance = {
   get: jest.fn(),
@@ -162,5 +163,18 @@ describe('WeatherTool', () => {
     await expect(
       tool.execute({ latitude: 12.34, longitude: 56.78 }),
     ).rejects.toThrow();
+  });
+});
+
+describe('tool contract stability', () => {
+  it('definition snapshot', () => {
+    const mockConfig = { get: jest.fn().mockReturnValue('test-api-key') } as any;
+    const tool = new WeatherTool(mockConfig);
+    expect({
+      name: tool.name,
+      version: tool.version,
+      description: tool.description,
+      schema: z.toJSONSchema(tool.schema),
+    }).toMatchSnapshot();
   });
 });

@@ -50,12 +50,24 @@ export class ToolExecutor {
       }
 
       const t0 = Date.now();
+      if (tool.deprecated) {
+        this.logger.warn({
+          event: 'tool_deprecated_called',
+          runId,
+          agentName,
+          turn: turnNumber,
+          toolName: block.name,
+          toolVersion: tool.version,
+          deprecationMessage: tool.deprecationMessage,
+        });
+      }
       this.logger.log({
         event: 'tool_call',
         runId,
         agentName,
         turn: turnNumber,
         toolName: block.name,
+        toolVersion: tool.version,
       });
 
       try {
@@ -75,6 +87,7 @@ export class ToolExecutor {
           agentName,
           turn: turnNumber,
           toolName: block.name,
+          toolVersion: tool.version,
           latencyMs,
           success: true,
         });
@@ -95,6 +108,7 @@ export class ToolExecutor {
           agentName,
           turn: turnNumber,
           toolName: block.name,
+          toolVersion: tool.version,
           latencyMs,
           success: false,
           errorType,
