@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { z } from 'zod';
-import { Tool } from '../../../application/ports/tool.interface';
+import { Tool } from '../../../../application/ports/tool.interface';
 
 import { evaluate } from 'mathjs';
 

@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { WeatherTool } from './weather.tool';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
-import { AppConfig } from '../../../config/config.schema';
+import { AppConfig } from '../../../../config/config.schema';
 
 const mockAxiosInstance = {
   get: jest.fn(),

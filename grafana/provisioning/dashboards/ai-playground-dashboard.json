@@ -759,7 +759,7 @@
             "uid": "Loki"
           },
           "editorMode": "code",
-          "expr": "sum by (status) (count_over_time({service_name=\"nestjs-ai-playground\"} | json | event=\"run_complete\" | agentName=~\"$agent_name\" [$__interval]))",
+          "expr": "sum by (status) (count_over_time({service_name=\"nestjs-ai-playground\"} | json | event=\"run_complete\" | agentName=~\"$agent_name\" | status=~\"$status\" [$__interval]))",
           "legendFormat": "{{status}}",
           "queryType": "range",
           "refId": "A"
@@ -1495,9 +1495,19 @@
             "uid": "Loki"
           },
           "editorMode": "code",
-          "expr": "{service_name=\"nestjs-ai-playground\"} | json | event=~\"tool_call|tool_result\" | toolName=~\"$tool_name\" | errorType=~\"$tool_error_type\" | agentName=~\"$agent_name\"",
+          "expr": "{service_name=\"nestjs-ai-playground\"} | json | event=\"tool_call\" | toolName=~\"$tool_name\" | agentName=~\"$agent_name\"",
           "queryType": "range",
           "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "Loki"
+          },
+          "editorMode": "code",
+          "expr": "{service_name=\"nestjs-ai-playground\"} | json | event=\"tool_result\" | toolName=~\"$tool_name\" | errorType=~\"$tool_error_type\" | agentName=~\"$agent_name\"",
+          "queryType": "range",
+          "refId": "B"
         }
       ],
       "options": {
@@ -2076,7 +2086,7 @@
             "uid": "Loki"
           },
           "editorMode": "code",
-          "expr": "{service_name=\"nestjs-ai-playground\"} | json | agentName=~\"$agent_name\" | line_format \"[{{.traceId}}] [{{.agentName}}] [{{.context}}] {{if .event}}event={{.event}}{{else}}{{.message}}{{end}} {{if .model}}model={{.model}}{{end}} {{if .status}}status={{.status}}{{end}} {{if .totalLatencyMs}}latency={{.totalLatencyMs}}ms{{end}} {{if .totalInputTokens}}in={{.totalInputTokens}} out={{.totalOutputTokens}}{{else if .inputTokens}}in={{.inputTokens}} out={{.outputTokens}}{{end}} {{if .toolName}}tool={{.toolName}}{{end}}\"",
+          "expr": "{service_name=\"nestjs-ai-playground\"} | json | agentName=~\"$agent_name\" | line_format \"[{{.traceId}}] [{{.agentName}}] [{{.context}}] {{if .event}}event={{.event}}{{else}}{{.message}}{{end}} {{if .runId}} run={{.runId}}{{end}} {{if .model}}model={{.model}}{{end}} {{if .status}}status={{.status}}{{end}} {{if .totalLatencyMs}}latency={{.totalLatencyMs}}ms{{end}} {{if .totalInputTokens}}in={{.totalInputTokens}} out={{.totalOutputTokens}}{{else if .inputTokens}}in={{.inputTokens}} out={{.outputTokens}}{{end}} {{if .toolName}}tool={{.toolName}}{{end}}\"",
           "queryType": "range",
           "refId": "A"
         }
@@ -2093,44 +2103,182 @@
       },
       "id": 800,
       "title": "\ud83d\udd0d Run Drilldown (select a Run ID above)",
-      "type": "row"
-    },
-    {
-      "datasource": {
-        "type": "loki",
-        "uid": "Loki"
-      },
-      "gridPos": {
-        "h": 15,
-        "w": 24,
-        "x": 0,
-        "y": 92
-      },
-      "id": 801,
-      "title": "Run Event Timeline",
-      "description": "All events for the selected $run_id in chronological order. Set the Run ID variable above.",
-      "targets": [
+      "type": "row",
+      "panels": [
         {
           "datasource": {
             "type": "loki",
             "uid": "Loki"
           },
-          "editorMode": "code",
-          "expr": "{service_name=\"nestjs-ai-playground\"} | json | runId=~\"$run_id\" | agentName=~\"$agent_name\" | line_format \"[{{.event}}] turn={{.turn}} {{if .status}}status={{.status}}{{end}}{{if .toolName}} tool={{.toolName}}{{end}}{{if .latencyMs}} latency={{.latencyMs}}ms{{end}}{{if .totalLatencyMs}} totalLatency={{.totalLatencyMs}}ms{{end}}\"",
-          "queryType": "range",
-          "refId": "A"
+          "gridPos": {
+            "h": 15,
+            "w": 24,
+            "x": 0,
+            "y": 92
+          },
+          "id": 801,
+          "title": "Run Event Timeline",
+          "description": "All events for the selected $run_id in chronological order. Set the Run ID variable above.",
+          "targets": [
+            {
+              "datasource": {
+                "type": "loki",
+                "uid": "Loki"
+              },
+              "editorMode": "code",
+              "expr": "{service_name=\"nestjs-ai-playground\"} | json | runId=~\"$run_id\" | agentName=~\"$agent_name\" | line_format \"[{{.event}}] turn={{.turn}} {{if .status}}status={{.status}}{{end}}{{if .toolName}} tool={{.toolName}}{{end}}{{if .latencyMs}} latency={{.latencyMs}}ms{{end}}{{if .totalLatencyMs}} totalLatency={{.totalLatencyMs}}ms{{end}}\"",
+              "queryType": "range",
+              "refId": "A"
+            }
+          ],
+          "options": {
+            "dedupStrategy": "none",
+            "enableLogDetails": true,
+            "prettifyLogMessage": false,
+            "showLabels": false,
+            "showTime": true,
+            "sortOrder": "Ascending",
+            "wrapLogMessage": true
+          },
+          "type": "logs"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "Loki"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "blue",
+                    "value": null
+                  }
+                ]
+              }
+            },
+            "overrides": [
+              {
+                "matcher": { "id": "byName", "options": "Total Latency (ms)" },
+                "properties": [{ "id": "unit", "value": "ms" }]
+              },
+              {
+                "matcher": { "id": "byName", "options": "Total Turns" },
+                "properties": [{ "id": "unit", "value": "short" }]
+              },
+              {
+                "matcher": { "id": "byName", "options": "Input Tokens" },
+                "properties": [{ "id": "unit", "value": "short" }]
+              },
+              {
+                "matcher": { "id": "byName", "options": "Output Tokens" },
+                "properties": [{ "id": "unit", "value": "short" }]
+              },
+              {
+                "matcher": { "id": "byName", "options": "Thought Turns" },
+                "properties": [{ "id": "unit", "value": "short" }]
+              }
+            ]
+          },
+          "gridPos": {
+            "h": 4,
+            "w": 24,
+            "x": 0,
+            "y": 107
+          },
+          "id": 802,
+          "title": "Single Run Stats",
+          "description": "Summary stats from the run_complete event for the selected run ID.",
+          "targets": [
+            {
+              "datasource": {
+                "type": "loki",
+                "uid": "Loki"
+              },
+              "editorMode": "code",
+              "expr": "last_over_time({service_name=\"nestjs-ai-playground\"} | json | event=\"run_complete\" | runId=~\"$run_id\" | unwrap totalLatencyMs [$__range])",
+              "legendFormat": "Total Latency (ms)",
+              "queryType": "instant",
+              "refId": "A"
+            },
+            {
+              "datasource": {
+                "type": "loki",
+                "uid": "Loki"
+              },
+              "editorMode": "code",
+              "expr": "last_over_time({service_name=\"nestjs-ai-playground\"} | json | event=\"run_complete\" | runId=~\"$run_id\" | unwrap totalTurns [$__range])",
+              "legendFormat": "Total Turns",
+              "queryType": "instant",
+              "refId": "B"
+            },
+            {
+              "datasource": {
+                "type": "loki",
+                "uid": "Loki"
+              },
+              "editorMode": "code",
+              "expr": "last_over_time({service_name=\"nestjs-ai-playground\"} | json | event=\"run_complete\" | runId=~\"$run_id\" | unwrap totalInputTokens [$__range])",
+              "legendFormat": "Input Tokens",
+              "queryType": "instant",
+              "refId": "C"
+            },
+            {
+              "datasource": {
+                "type": "loki",
+                "uid": "Loki"
+              },
+              "editorMode": "code",
+              "expr": "last_over_time({service_name=\"nestjs-ai-playground\"} | json | event=\"run_complete\" | runId=~\"$run_id\" | unwrap totalOutputTokens [$__range])",
+              "legendFormat": "Output Tokens",
+              "queryType": "instant",
+              "refId": "D"
+            },
+            {
+              "datasource": {
+                "type": "loki",
+                "uid": "Loki"
+              },
+              "editorMode": "code",
+              "expr": "last_over_time({service_name=\"nestjs-ai-playground\"} | json | event=\"run_complete\" | runId=~\"$run_id\" | unwrap totalThoughtTurns [$__range])",
+              "legendFormat": "Thought Turns",
+              "queryType": "instant",
+              "refId": "E"
+            }
+          ],
+          "options": {
+            "colorMode": "value",
+            "graphMode": "none",
+            "justifyMode": "auto",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "values": false,
+              "fields": ""
+            },
+            "textMode": "value_and_name"
+          },
+          "type": "stat"
         }
-      ],
-      "options": {
-        "dedupStrategy": "none",
-        "enableLogDetails": true,
-        "prettifyLogMessage": false,
-        "showLabels": false,
-        "showTime": true,
-        "sortOrder": "Ascending",
-        "wrapLogMessage": true
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 92
       },
-      "type": "logs"
+      "id": 900,
+      "title": "📉 Regression Detection",
+      "type": "row"
     },
     {
       "datasource": {
@@ -2139,29 +2287,26 @@
       },
       "fieldConfig": {
         "defaults": {
-          "color": {
-            "mode": "thresholds"
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "fillOpacity": 10,
+            "gradientMode": "opacity"
           },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "blue",
-                "value": null
-              }
-            ]
+          "color": {
+            "mode": "palette-classic"
           }
         }
       },
       "gridPos": {
-        "h": 4,
-        "w": 24,
+        "h": 7,
+        "w": 8,
         "x": 0,
-        "y": 107
+        "y": 93
       },
-      "id": 802,
-      "title": "Single Run Stats",
-      "description": "Summary stats from the run_complete event for the selected run ID.",
+      "id": 901,
+      "title": "Avg Turns / Run (Trend)",
+      "description": "Rising trend = agent converging slower. Regression in prompt or model causes more ReAct iterations per task.",
       "targets": [
         {
           "datasource": {
@@ -2169,9 +2314,56 @@
             "uid": "Loki"
           },
           "editorMode": "code",
-          "expr": "last_over_time({service_name=\"nestjs-ai-playground\"} | json | event=\"run_complete\" | runId=~\"$run_id\" | unwrap totalLatencyMs [$__range])",
-          "legendFormat": "Total Latency (ms)",
-          "queryType": "instant",
+          "expr": "avg by (agentName) (avg_over_time({service_name=\"nestjs-ai-playground\"} | json | event=\"run_complete\" | agentName=~\"$agent_name\" | model=~\"$model\" | unwrap totalTurns [$__interval]))",
+          "legendFormat": "{{agentName}}",
+          "queryType": "range",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "tooltip": { "mode": "multi", "sort": "desc" },
+        "legend": { "displayMode": "list", "placement": "bottom" }
+      },
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "Loki"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "fillOpacity": 10,
+            "gradientMode": "opacity"
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short"
+        }
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 8,
+        "y": 93
+      },
+      "id": 902,
+      "title": "Avg Tokens / Run (Trend)",
+      "description": "Rising input tokens = context bloat or prompt growth. Rising output tokens = model over-generating. Either indicates efficiency regression.",
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "Loki"
+          },
+          "editorMode": "code",
+          "expr": "avg by (agentName) (avg_over_time({service_name=\"nestjs-ai-playground\"} | json | event=\"run_complete\" | agentName=~\"$agent_name\" | model=~\"$model\" | unwrap totalInputTokens [$__interval]))",
+          "legendFormat": "{{agentName}} input",
+          "queryType": "range",
           "refId": "A"
         },
         {
@@ -2180,59 +2372,206 @@
             "uid": "Loki"
           },
           "editorMode": "code",
-          "expr": "last_over_time({service_name=\"nestjs-ai-playground\"} | json | event=\"run_complete\" | runId=~\"$run_id\" | unwrap totalTurns [$__range])",
-          "legendFormat": "Total Turns",
-          "queryType": "instant",
+          "expr": "avg by (agentName) (avg_over_time({service_name=\"nestjs-ai-playground\"} | json | event=\"run_complete\" | agentName=~\"$agent_name\" | model=~\"$model\" | unwrap totalOutputTokens [$__interval]))",
+          "legendFormat": "{{agentName}} output",
+          "queryType": "range",
           "refId": "B"
-        },
-        {
-          "datasource": {
-            "type": "loki",
-            "uid": "Loki"
-          },
-          "editorMode": "code",
-          "expr": "last_over_time({service_name=\"nestjs-ai-playground\"} | json | event=\"run_complete\" | runId=~\"$run_id\" | unwrap totalInputTokens [$__range])",
-          "legendFormat": "Input Tokens",
-          "queryType": "instant",
-          "refId": "C"
-        },
-        {
-          "datasource": {
-            "type": "loki",
-            "uid": "Loki"
-          },
-          "editorMode": "code",
-          "expr": "last_over_time({service_name=\"nestjs-ai-playground\"} | json | event=\"run_complete\" | runId=~\"$run_id\" | unwrap totalOutputTokens [$__range])",
-          "legendFormat": "Output Tokens",
-          "queryType": "instant",
-          "refId": "D"
-        },
-        {
-          "datasource": {
-            "type": "loki",
-            "uid": "Loki"
-          },
-          "editorMode": "code",
-          "expr": "last_over_time({service_name=\"nestjs-ai-playground\"} | json | event=\"run_complete\" | runId=~\"$run_id\" | unwrap totalThoughtTurns [$__range])",
-          "legendFormat": "Thought Turns",
-          "queryType": "instant",
-          "refId": "E"
         }
       ],
       "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "values": false,
-          "fields": ""
-        },
-        "textMode": "value_and_name"
+        "tooltip": { "mode": "multi", "sort": "desc" },
+        "legend": { "displayMode": "list", "placement": "bottom" }
       },
-      "type": "stat"
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "Loki"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 70,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        }
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 16,
+        "y": 93
+      },
+      "id": 903,
+      "title": "Goal Abandonment Rate (Trend)",
+      "description": "Count of runs that ended in loop_terminated or max_turns_exceeded. Any sustained rise signals the agent can no longer complete tasks — check for prompt or model regression.",
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "Loki"
+          },
+          "editorMode": "code",
+          "expr": "sum by (status) (count_over_time({service_name=\"nestjs-ai-playground\"} | json | event=\"run_complete\" | status=~\"loop_terminated|max_turns_exceeded\" | agentName=~\"$agent_name\" [$__interval]))",
+          "legendFormat": "{{status}}",
+          "queryType": "range",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "tooltip": { "mode": "multi", "sort": "desc" },
+        "legend": { "displayMode": "list", "placement": "bottom" }
+      },
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "Loki"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "fillOpacity": 5,
+            "gradientMode": "none"
+          },
+          "unit": "ms",
+          "color": {
+            "mode": "palette-classic"
+          }
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 100
+      },
+      "id": 904,
+      "title": "p95 Latency — This Period vs Last Week",
+      "description": "Current p95 (solid) overlaid against the same metric 7 days ago (dashed). A rising current line vs the prior line confirms a latency regression.",
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "Loki"
+          },
+          "editorMode": "code",
+          "expr": "avg(quantile_over_time(0.95, {service_name=\"nestjs-ai-playground\"} | json | event=\"run_complete\" | agentName=~\"$agent_name\" | model=~\"$model\" | unwrap totalLatencyMs [$__interval]))",
+          "legendFormat": "p95 now",
+          "queryType": "range",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "Loki"
+          },
+          "editorMode": "code",
+          "expr": "avg(quantile_over_time(0.95, {service_name=\"nestjs-ai-playground\"} | json | event=\"run_complete\" | agentName=~\"$agent_name\" | model=~\"$model\" | unwrap totalLatencyMs [$__interval] offset 7d))",
+          "legendFormat": "p95 -7d",
+          "queryType": "range",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "fillOpacity": 5
+          },
+          "unit": "ms"
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "p95 -7d" },
+            "properties": [
+              { "id": "custom.lineStyle", "value": { "dash": [10, 10], "fill": "dash" } },
+              { "id": "custom.fillOpacity", "value": 0 }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "tooltip": { "mode": "multi", "sort": "desc" },
+        "legend": { "displayMode": "list", "placement": "bottom" }
+      },
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "Loki"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 100
+      },
+      "id": 905,
+      "title": "Successful Runs — This Period vs Last Week",
+      "description": "Successful run count now vs 7 days ago. A drop in the current line relative to last week indicates a reliability regression.",
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "Loki"
+          },
+          "editorMode": "code",
+          "expr": "sum(count_over_time({service_name=\"nestjs-ai-playground\"} | json | event=\"run_complete\" | status=\"success\" | agentName=~\"$agent_name\" [$__interval]))",
+          "legendFormat": "success now",
+          "queryType": "range",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "Loki"
+          },
+          "editorMode": "code",
+          "expr": "sum(count_over_time({service_name=\"nestjs-ai-playground\"} | json | event=\"run_complete\" | status=\"success\" | agentName=~\"$agent_name\" [$__interval] offset 7d))",
+          "legendFormat": "success -7d",
+          "queryType": "range",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "fillOpacity": 5,
+            "gradientMode": "none"
+          },
+          "color": { "mode": "palette-classic" }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "success -7d" },
+            "properties": [
+              { "id": "custom.lineStyle", "value": { "dash": [10, 10], "fill": "dash" } },
+              { "id": "custom.fillOpacity", "value": 0 }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "tooltip": { "mode": "multi", "sort": "desc" },
+        "legend": { "displayMode": "list", "placement": "bottom" }
+      },
+      "type": "timeseries"
     }
   ],
   "schemaVersion": 38,
@@ -2364,13 +2703,13 @@
       },
       {
         "current": {
-          "selected": false,
-          "value": ""
+          "selected": true,
+          "value": ".*"
         },
         "hide": 0,
         "name": "run_id",
         "label": "Run ID",
-        "query": "",
+        "query": ".*",
         "skipUrlSync": false,
         "type": "textbox"
       },
@@ -2426,6 +2765,6 @@
   },
   "title": "NestJS AI Playground Observability",
   "uid": "nestjs-ai-playground",
-  "version": 9,
+  "version": 11,
   "weekStart": ""
 }

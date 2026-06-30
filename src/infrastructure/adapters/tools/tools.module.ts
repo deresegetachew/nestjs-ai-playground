@@ -1,7 +1,7 @@
 import { Global, Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { CalculatorTool } from './calculator.tool';
-import { WeatherTool } from './weather.tool';
+import { CalculatorTool } from './calculator/calculator.tool';
+import { WeatherTool } from './weather/weather.tool';
 import { AGENT_TOOLS } from '../../../application/ports/tool.tokens';
 
 @Global()

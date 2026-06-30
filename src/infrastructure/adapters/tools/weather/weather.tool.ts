@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { z } from 'zod';
-import { Tool } from '../../../application/ports/tool.interface';
-import { AppConfig } from '../../../config/config.schema';
-import { BaseHttpTool } from './base-http.tool';
+import { Tool } from '../../../../application/ports/tool.interface';
+import { AppConfig } from '../../../../config/config.schema';
+import { BaseHttpTool } from '../base-http.tool';
 
 const WeatherInputSchema = z.object({
   latitude: z
