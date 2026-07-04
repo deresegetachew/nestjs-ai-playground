@@ -1,0 +1,36 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`tool contract stability definition snapshot 1`] = `
+{
+  "description": "Get the daily weather forecast for a location (latitude, longitude) for a specified number of days. Returns forecast summaries with temperatures and weather conditions.",
+  "name": "weather",
+  "schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "additionalProperties": false,
+    "properties": {
+      "days": {
+        "description": "Number of days to forecast, up to 10. Defaults to 5.",
+        "maximum": 10,
+        "minimum": 1,
+        "type": "integer",
+      },
+      "latitude": {
+        "default": 52.52091519494772,
+        "description": "Latitude of the location, e.g. 52.520915. Defaults to Berlin Brandenburg Gate.",
+        "type": "number",
+      },
+      "longitude": {
+        "default": 13.376471080450543,
+        "description": "Longitude of the location, e.g. 13.376471. Defaults to Berlin Brandenburg Gate.",
+        "type": "number",
+      },
+    },
+    "required": [
+      "latitude",
+      "longitude",
+    ],
+    "type": "object",
+  },
+  "version": "1",
+}
+`;

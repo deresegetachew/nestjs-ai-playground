@@ -8,6 +8,9 @@ export interface ToolUseBlock {
   id: string;
   name: string;
   input: unknown;
+  // Gemini thinking mode attaches an opaque signature to each function call that
+  // must be echoed back verbatim in subsequent turns. Other vendors ignore this field.
+  thoughtSignature?: string;
 }
 
 export interface ToolResultBlock {

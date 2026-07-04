@@ -4,7 +4,7 @@ import { BadRequestException } from '@nestjs/common';
 import { AskSimpleChatbotHandler } from './ask-simple-chatbot.handler';
 import { AskSimpleChatbotCommand } from '../commands/ask-simple-chatbot.command';
 import { ReActAgentExecutor } from '../services/react-agent-executor.service';
-import { AGENT_TOOLS } from '../ports/tool.tokens';
+import { SIMPLE_CHATBOT_TOOLS } from '../ports/tool.tokens';
 import { CONVERSATION_REPOSITORY } from '../../domain/ports/conversation-repository.port';
 
 describe('CommandHandlerWithValidation', () => {
@@ -33,7 +33,7 @@ describe('CommandHandlerWithValidation', () => {
           useValue: mockExecutor,
         },
         {
-          provide: AGENT_TOOLS,
+          provide: SIMPLE_CHATBOT_TOOLS,
           useValue: [],
         },
         {

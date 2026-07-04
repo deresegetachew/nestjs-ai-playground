@@ -55,7 +55,9 @@ export function mapDomainMessagesToGemini(messages: AgentMessage[]): Content[] {
               args: block.input as Record<string, unknown>,
               id: block.id,
             },
-          };
+            // thoughtSignature is a Part-level field per Gemini API spec
+            ...(block.thoughtSignature ? { thoughtSignature: block.thoughtSignature } : {}),
+          } as Part;
         } else if (block.type === 'tool_result') {
           let responseObj: unknown;
           try {
@@ -106,6 +108,8 @@ export function mapGeminiPartsToTurn(
           `call_${Math.random().toString(36).substr(2, 9)}`,
         name: part.functionCall.name,
         input: part.functionCall.args || {},
+        // thoughtSignature is a Part-level field, not nested inside functionCall
+        thoughtSignature: (part as any).thoughtSignature,
       });
     } else if (
       legacyPart.functionCalls &&

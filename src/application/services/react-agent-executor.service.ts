@@ -4,10 +4,9 @@ import * as crypto from 'node:crypto';
 
 import { AIClient } from '../ports/ai-client.port';
 import { Tool } from '../ports/tool.interface';
-import { AgentMessage, AgentStreamChunk, AgentTurn } from '../ports/agent-types';
+import { AgentMessage, AgentStreamChunk, LlmModel } from '../ports/agent-types';
 import { ToolExecutor } from './tool-executor.service';
 import { BaseAgentExecutor } from './base-agent-executor';
-import { AgentRunContext } from './agent-executor.types';
 import { AgentExecutionTimedOutException, AgentMaxTurnsExceededException } from '../exceptions/agent-execution.exception';
 
 @Injectable()
@@ -24,10 +23,6 @@ export class ReActAgentExecutor extends BaseAgentExecutor {
     super(toolExecutor, aiClient, configService);
   }
 
-  // ---------------------------------------------------------------------------
-  // Public API
-  // ---------------------------------------------------------------------------
-
   async *run(
     systemPrompt: string,
     tools: Tool[],
@@ -35,19 +30,19 @@ export class ReActAgentExecutor extends BaseAgentExecutor {
     maxTurns = 10,
     traceId?: string,
     agentName?: string,
+    model: LlmModel = LlmModel.GeminiFlash,
+    temperature?: number,
   ): AsyncGenerator<AgentStreamChunk, void, unknown> {
-    const model = (this.aiClient as any).defaultModel || 'unknown';
-    // Use the trace ID passed down from the command handler to correlate log lines.
-    // Falls back to a fresh UUID when run() is called without a trace context.
     const runId = traceId ?? crypto.randomUUID();
-    const ctx = this.createRunContext(
+    const  ctx = this.createRunContext(
       runId,
       systemPrompt,
       tools,
       messages,
       maxTurns,
       model,
-      agentName || 'simple-chatbot',
+      agentName ?? ReActAgentExecutor.name,
+      temperature,
     );
 
     this.logger.log({
@@ -61,7 +56,7 @@ export class ReActAgentExecutor extends BaseAgentExecutor {
 
     try {
       while (this.withinExecutionThresholdsOrThrow(ctx, this.timeoutMs)) {
-        ctx.turns++;
+        ctx.incrementTurns();
 
         this.logger.log({ event: 'turn_start', runId: ctx.runId, turn: ctx.turns });
 
@@ -105,6 +100,4 @@ export class ReActAgentExecutor extends BaseAgentExecutor {
       throw err;
     }
   }
-
-
 }

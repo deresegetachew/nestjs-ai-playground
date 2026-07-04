@@ -1,4 +1,3 @@
-import { z } from 'zod';
 import { Logger, Inject } from '@nestjs/common';
 import { Tool } from '../ports/tool.interface';
 import {
@@ -9,7 +8,7 @@ import {
 } from '../ports/agent-types';
 import { ToolExecutor } from './tool-executor.service';
 import { AIClient } from '../ports/ai-client.port';
-import { sanitiseToolSchema } from '../utils/schema.utils';
+import { mapToolToDefinition } from '../utils/tool.utils';
 import {
   AgentExecutionTimedOutException,
   AgentMaxTurnsExceededException,
@@ -17,7 +16,7 @@ import {
   LlmStreamIncompleteException,
 } from '../exceptions/agent-execution.exception';
 import { validateOutputText } from '../guardrails/output.guardrail';
-import { AgentRunContext, AgentExecutionState, ToolCallHistoryEntry } from './agent-executor.types';
+import { AgentRunContext, LoopDetectionState, ToolCallHistoryEntry } from './agent-executor.types';
 import { ConfigService } from '@nestjs/config';
 import { AppConfig } from '../../config/config.schema';
 import { loadConfig } from '../../config/load-config';
@@ -67,6 +66,9 @@ export abstract class BaseAgentExecutor {
     maxTurns?: number,
     traceId?: string,
     agentName?: string,
+    model?: string,
+    temperature?: number,
+    toolChoice?: { toolName: string },
   ): AsyncIterable<AgentStreamChunk>;
 
   // ---------------------------------------------------------------------------
@@ -81,47 +83,24 @@ export abstract class BaseAgentExecutor {
     maxTurns: number,
     model: string,
     agentName: string,
+    temperature = 0.7,
+    toolChoice?: { toolName: string },
   ): AgentRunContext {
-    return {
+    return new AgentRunContext({
       runId,
       agentName,
-      runStart: Date.now(),
-      model,
-      maxTurns,
       systemPrompt,
       tools,
-      localMessages: [...messages],
-      turns: 0,
-      executionState: this.createExecutionState(),
-      totalInputTokens: 0,
-      totalOutputTokens: 0,
-      totalThoughtTurns: 0,
-    };
-  }
-
-  protected createExecutionState(): AgentExecutionState {
-    return {
-      history: [],
-      warningInjected: false,
-      turnsSinceWarning: 0,
-    };
-  }
-
-  /**
-   * Map standard domain Tool structures to the format expected by AI Clients.
-   */
-  protected mapToolsToDefinition(tools: Tool[]) {
-    return tools.map((t) => {
-      const jsonSchema = z.toJSONSchema(t.schema) as Record<string, unknown>;
-      const description = t.deprecated
-        ? `[DEPRECATED: ${t.deprecationMessage ?? 'use the newer version of this tool'}] ${t.description}`
-        : t.description;
-      return {
-        name: t.name,
-        description,
-        inputSchema: sanitiseToolSchema(jsonSchema),
-      };
+      messages,
+      maxTurns,
+      model,
+      temperature,
+      toolChoice,
     });
+  }
+
+  protected mapToolsToDefinition(tools: Tool[]) {
+    return tools.map(mapToolToDefinition);
   }
 
   // ---------------------------------------------------------------------------
@@ -163,7 +142,7 @@ export abstract class BaseAgentExecutor {
   protected async checkAndTrimContext(ctx: AgentRunContext): Promise<void> {
     try {
       const tokenCount = await this.aiClient.countTokens(
-        ctx.localMessages,
+        [...ctx.localMessages],
         ctx.model,
       );
 
@@ -212,12 +191,10 @@ export abstract class BaseAgentExecutor {
       });
 
       // Replace history prefix with a compact summary card.
-      ctx.localMessages.splice(
-        0,
-        ctx.localMessages.length,
+      ctx.replaceMessages([
         { role: 'user', content: `Previous conversation summary: ${summaryText}` },
         ...last5Messages,
-      );
+      ]);
     } catch (err: any) {
       this.logger.warn(
         `Failed to count tokens or summarize conversation: ${err.message ?? err}`,
@@ -241,7 +218,7 @@ export abstract class BaseAgentExecutor {
   ): AsyncGenerator<AgentStreamChunk, { shouldTerminate: boolean }, unknown> {
     yield { type: 'turn_completed', isEnd: false };
 
-    const loopCheck = this.processToolCalls(ctx.executionState, turn.toolUses);
+    const loopCheck = this.processToolCalls(ctx.loopDetection, turn.toolUses);
 
     if (loopCheck.shouldWarn) {
       this.logger.log({
@@ -287,7 +264,7 @@ export abstract class BaseAgentExecutor {
 
     const results = await this.toolExecutor.execute(
       turn,
-      ctx.tools,
+      [...ctx.tools],
       ctx.runId,
       ctx.turns,
       ctx.agentName,
@@ -314,7 +291,7 @@ export abstract class BaseAgentExecutor {
     // Append the full tool-result block to the conversation and signal the
     // host so it can persist the update before the next LLM call.
     const userResultsMsg: AgentMessage = { role: 'user', content: results };
-    ctx.localMessages.push(userResultsMsg);
+    ctx.addMessage(userResultsMsg);
     yield { type: 'message_added', message: userResultsMsg };
 
     return { shouldTerminate: false };
@@ -368,9 +345,11 @@ export abstract class BaseAgentExecutor {
     const { chunks, turnPromise } = this.aiClient.createMessage({
       maxTokens: 1024,
       system: ctx.systemPrompt,
-      tools: this.mapToolsToDefinition(ctx.tools),
+      tools: this.mapToolsToDefinition([...ctx.tools]),
       messages: [...ctx.localMessages],
       model: ctx.model,
+      temperature: ctx.temperature,
+      toolChoice: ctx.toolChoice,
     });
 
     // Prevent unhandled promise rejection if chunks throw before turnPromise is awaited.
@@ -383,7 +362,7 @@ export abstract class BaseAgentExecutor {
       if (chunk.type === 'thought') hadThoughtInTurn = true;
       yield chunk;
     }
-    if (hadThoughtInTurn) ctx.totalThoughtTurns++;
+    if (hadThoughtInTurn) ctx.incrementThoughtTurns();
 
     const turn = await turnPromise;
 
@@ -395,8 +374,7 @@ export abstract class BaseAgentExecutor {
     const inputTokens = turn.usage?.inputTokens ?? 0;
     const outputTokens = turn.usage?.outputTokens ?? 0;
 
-    ctx.totalInputTokens += inputTokens;
-    ctx.totalOutputTokens += outputTokens;
+    ctx.addTokens(inputTokens, outputTokens);
 
     this.logger.log({
       event: 'llm_response',
@@ -417,7 +395,7 @@ export abstract class BaseAgentExecutor {
     // Append the assistant message immediately so the next handler or the next
     // iteration of the loop sees an up-to-date conversation history.
     const assistantMsg: AgentMessage = { role: 'assistant', content: turn.content };
-    ctx.localMessages.push(assistantMsg);
+    ctx.addMessage(assistantMsg);
     yield { type: 'message_added', message: assistantMsg };
 
     return turn;
@@ -428,7 +406,7 @@ export abstract class BaseAgentExecutor {
   // ---------------------------------------------------------------------------
 
   protected processToolCalls(
-    state: AgentExecutionState,
+    state: LoopDetectionState,
     toolUses: ToolUseBlock[],
   ): { shouldWarn: boolean; shouldTerminate: boolean; offendingTool?: string } {
     let repetitiveDetected = false;
@@ -436,12 +414,7 @@ export abstract class BaseAgentExecutor {
 
     for (const block of toolUses) {
       const hash = this.generateArgsHash(block.input);
-      state.history.push({ tool: block.name, argsHash: hash });
-
-      // Cap sliding window to avoid unbounded memory growth.
-      if (state.history.length > 12) {
-        state.history.shift();
-      }
+      state.pushHistory({ tool: block.name, argsHash: hash });
 
       const len = state.history.length;
 
@@ -469,17 +442,16 @@ export abstract class BaseAgentExecutor {
 
     if (repetitiveDetected) {
       if (!state.warningInjected) {
-        state.warningInjected = true;
-        state.turnsSinceWarning = 0;
+        state.injectWarning();
         return { shouldWarn: true, shouldTerminate: false, offendingTool };
       } else {
-        state.turnsSinceWarning++;
+        state.incrementTurnsSinceWarning();
         if (state.turnsSinceWarning >= 2) {
           return { shouldWarn: false, shouldTerminate: true, offendingTool };
         }
       }
     } else {
-      state.turnsSinceWarning = 0;
+      state.resetTurnsSinceWarning();
     }
 
     return { shouldWarn: false, shouldTerminate: false };

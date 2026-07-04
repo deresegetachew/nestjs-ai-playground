@@ -645,7 +645,7 @@ describe('ReActAgentExecutor', () => {
       expect(getRunIdFromSpy(spy)).toBe(knownTraceId);
     });
 
-    it('should log the provided agent name or default to simple-chatbot', async () => {
+    it('should log the provided agent name or default to the executor class name', async () => {
       const spy = captureRunId(executor);
 
       await runExecutor(
@@ -667,7 +667,7 @@ describe('ReActAgentExecutor', () => {
         [{ role: 'user', content: 'hi' }],
       );
 
-      expect(spy.mock.calls[4][0].agentName).toBe('simple-chatbot');
+      expect(spy.mock.calls[4][0].agentName).toBe('ReActAgentExecutor');
     });
 
     it('should fall back to a generated UUID when no trace context is active', async () => {

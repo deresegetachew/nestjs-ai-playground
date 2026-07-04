@@ -3,7 +3,7 @@ import { AskSimpleChatbotHandler } from './ask-simple-chatbot.handler';
 import { AskSimpleChatbotCommand, AskSimpleChatbotCommandSchema } from '../commands/ask-simple-chatbot.command';
 import { ReActAgentExecutor } from '../services/react-agent-executor.service';
 import { Tool } from '../ports/tool.interface';
-import { AGENT_TOOLS } from '../ports/tool.tokens';
+import { SIMPLE_CHATBOT_TOOLS } from '../ports/tool.tokens';
 import { CONVERSATION_REPOSITORY } from '../../domain/ports/conversation-repository.port';
 import { Conversation } from '../../domain/models/conversation.entity';
 import { z } from 'zod';
@@ -47,7 +47,7 @@ describe('AskSimpleChatbotHandler', () => {
           useValue: mockExecutor,
         },
         {
-          provide: AGENT_TOOLS,
+          provide: SIMPLE_CHATBOT_TOOLS,
           useValue: [mockCalculatorTool, mockWeatherTool],
         },
         {

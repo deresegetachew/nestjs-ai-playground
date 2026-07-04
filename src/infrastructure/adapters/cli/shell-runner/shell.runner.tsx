@@ -5,6 +5,7 @@ import * as crypto from 'node:crypto';
 import { AgentRegistry, RegistryCommand } from './agent.registry';
 import { ShellRouter } from './shell.router';
 import { AskSimpleChatbotCommand } from '../../../../application/commands/ask-simple-chatbot.command';
+import { AskSupportDeskCommand } from '../../../../application/commands/ask-support-desk.command';
 import { AgentMessage, AgentStreamChunk } from '../../../../application/ports/agent-types';
 import type { ConversationRepository } from '../../../../domain/ports/conversation-repository.port';
 import { CONVERSATION_REPOSITORY } from '../../../../domain/ports/conversation-repository.port';
@@ -87,13 +88,18 @@ export class ShellRunner extends CommandRunner {
 
     if (normalizedName === 'simple_chatbot') {
       const traceId = crypto.randomUUID().replace(/-/g, '');
-
-      const stream$ = await this.commandBus.execute<
+      return this.commandBus.execute<
         AskSimpleChatbotCommand,
         AsyncIterable<AgentStreamChunk>
       >(new AskSimpleChatbotCommand(message, conversationId, traceId));
+    }
 
-      return stream$;
+    if (normalizedName === 'support_desk') {
+      const traceId = crypto.randomUUID().replace(/-/g, '');
+      return this.commandBus.execute<
+        AskSupportDeskCommand,
+        AsyncIterable<AgentStreamChunk>
+      >(new AskSupportDeskCommand(message, conversationId, traceId));
     }
 
     throw new Error(

@@ -1,3 +1,5 @@
+import { RoutingDecision, AgentKey } from './agent-config.interface';
+
 export interface AgentToolDefinition {
   name: string;
   description: string;
@@ -63,6 +65,14 @@ export interface IAgentParams {
   tools: AgentToolDefinition[];
   messages: AgentMessage[];
   model?: string;
+  temperature?: number;
+  toolChoice?: { toolName: string };
+}
+
+export enum LlmModel {
+  GeminiFlash = 'gemini-3.5-flash',
+  GeminiFlashLite = 'gemini-3.1-flash-lite',
+  GeminiPro = 'gemini-2.5-pro',
 }
 
 export type AgentStreamChunk =
@@ -74,4 +84,6 @@ export type AgentStreamChunk =
   | { type: 'error'; text: string }
   | { type: 'turn_completed'; isEnd: boolean }
   | { type: 'message_added'; message: AgentMessage }
-  | { type: 'token_usage'; inputTokens: number; outputTokens: number };
+  | { type: 'token_usage'; inputTokens: number; outputTokens: number }
+  | { type: 'routing_decision' } & RoutingDecision
+  | { type: 'specialist_start'; specialist: AgentKey };

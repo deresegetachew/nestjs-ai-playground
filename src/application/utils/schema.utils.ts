@@ -13,6 +13,10 @@
  *   - `default`            — silently breaks Gemini function declaration parsing
  *   - `$defs` / `$ref`     — vendors do not resolve JSON Schema references
  *
+ * Fields converted:
+ *   - `const`              — z.literal() generates `{ "const": <value> }` which Gemini
+ *                            rejects. Converted to `{ "type": "<inferred>" }` instead.
+ *
  * This function is vendor-agnostic and should be used by all vendor mappers
  * (Gemini, OpenAI, Anthropic, etc.) when converting tool input schemas.
  */
@@ -31,6 +35,18 @@ export function sanitiseToolSchema(
 
   for (const [key, value] of Object.entries(schema)) {
     if (STRIP_KEYS.has(key)) continue;
+
+    // z.literal() produces { "const": <value> } — Gemini rejects this field.
+    // Map it to the equivalent JSON Schema type so the field remains typed.
+    if (key === 'const') {
+      if (!('type' in schema)) {
+        cleaned['type'] =
+          typeof value === 'boolean' ? 'boolean'
+          : typeof value === 'number'  ? 'number'
+          : 'string';
+      }
+      continue;
+    }
 
     if (key === 'properties' && typeof value === 'object' && value !== null) {
       // Recurse into each property schema

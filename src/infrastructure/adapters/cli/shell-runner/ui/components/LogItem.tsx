@@ -9,7 +9,7 @@ import {
 } from '../../../../../../application/exceptions/ai-client.exception';
 
 export interface LogStep {
-  type: 'thought' | 'calling_tool' | 'observation' | 'warning';
+  type: 'thought' | 'calling_tool' | 'observation' | 'warning' | 'routing';
   text: string;
 }
 
@@ -127,6 +127,9 @@ export const LogItem: React.FC<LogItemProps> = ({ ink, log }) => {
                 } else if (step.type === 'warning') {
                   color = 'red';
                   prefix = '[Warning]: ';
+                } else if (step.type === 'routing') {
+                  color = 'magenta';
+                  prefix = '[Routed]: ';
                 }
                 return (
                   <Box key={idx} flexDirection="row">

@@ -1,0 +1,23 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`tool contract stability definition snapshot 1`] = `
+{
+  "description": "Evaluate mathematical expressions. Returns a number.",
+  "name": "calculator",
+  "schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "additionalProperties": false,
+    "properties": {
+      "expression": {
+        "description": "The math expression to evaluate, e.g. "2 + 2"",
+        "type": "string",
+      },
+    },
+    "required": [
+      "expression",
+    ],
+    "type": "object",
+  },
+  "version": "1",
+}
+`;

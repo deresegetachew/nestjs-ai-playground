@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { GoogleGenAI, Part } from '@google/genai';
+import { GoogleGenAI, FunctionCallingConfigMode, Part } from '@google/genai';
 
 import { AppConfig } from '../../../../config/config.schema';
 import { AIModel } from '../../../../domain/models/ai-model.value-object';
@@ -178,10 +178,14 @@ export class GeminiStrategy implements AIClient {
               config: {
                 systemInstruction,
                 maxOutputTokens: params.maxTokens,
+                temperature: params.temperature,
                 tools:
                   tools.length > 0
                     ? [{ functionDeclarations: tools }]
                     : undefined,
+                toolConfig: params.toolChoice
+                  ? { functionCallingConfig: { mode: FunctionCallingConfigMode.ANY, allowedFunctionNames: [params.toolChoice.toolName] } }
+                  : undefined,
               },
             }),
           self.logger,

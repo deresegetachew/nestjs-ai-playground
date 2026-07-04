@@ -1,1 +1,5 @@
-export const AGENT_TOOLS = Symbol('AGENT_TOOLS');
+export const SIMPLE_CHATBOT_TOOLS = Symbol('SIMPLE_CHATBOT_TOOLS');
+export const SUPPORT_DESK_TRIAGE_TOOLS = Symbol('SUPPORT_DESK_TRIAGE_TOOLS');
+export const BILLING_TOOLS = Symbol('BILLING_TOOLS');
+export const TECH_SUPPORT_TOOLS = Symbol('TECH_SUPPORT_TOOLS');
+export const ACCOUNT_TOOLS = Symbol('ACCOUNT_TOOLS');

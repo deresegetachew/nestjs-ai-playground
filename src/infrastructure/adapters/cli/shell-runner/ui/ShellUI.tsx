@@ -226,6 +226,18 @@ function updateLogWithChunk(
         text: chunk.text,
       });
       break;
+    case 'routing_decision':
+      newLog.steps.push({
+        type: 'routing',
+        text: `→ ${chunk.specialists.map((s) => s.replace('_', '-')).join(', ')} — ${chunk.reason}`,
+      });
+      break;
+    case 'specialist_start':
+      newLog.steps.push({
+        type: 'routing',
+        text: `[${chunk.specialist.replace('_', '-')}]`,
+      });
+      break;
     case 'error':
       newLog.text = chunk.text;
       newLog.type = 'error';
